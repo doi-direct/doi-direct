@@ -6,14 +6,16 @@ scalaVersion := "2.10.1"
 
 resolvers ++= Seq(
 	"Java.net Maven2 Repository" at "http://download.java.net/maven/2/",
-	"tqft.net Maven repository" at "http://tqft.net/releases",
 	"Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
 	"Sonatype Nexus Releases" at "https://oss.sonatype.org/content/repositories/releases",
 	"Scala Snapshots" at "http://scala-tools.org/repo-snapshots/"
 )
+resolvers += "twitter-repo" at "http://maven.twttr.com"
 
 // Project dependencies
 libraryDependencies ++= Seq(
+	"com.twitter" % "finagle-core" % "1.9.0",
+	"com.twitter" % "finagle-http" % "1.9.0",
 	"org.apache.httpcomponents" % "httpclient" % "4.1.2"
 )
 
@@ -25,8 +27,6 @@ libraryDependencies ++= Seq(
 
 // Sometimes it's useful to see debugging out from the typer (e.g. to resolve slow compiles)
 // scalacOptions += "-Ytyper-debug"
-
-publishTo := Some(Resolver.sftp("tqft.net", "tqft.net", "tqft.net/releases") as ("scottmorrison", new java.io.File("/Users/scott/.ssh/id_rsa")))
 
 net.virtualvoid.sbt.graph.Plugin.graphSettings
 
