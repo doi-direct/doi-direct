@@ -25,13 +25,25 @@ object Web {
 class ResolverService extends Service[HttpRequest, HttpResponse] {
   def apply(req: HttpRequest): Future[HttpResponse] = {
     val response = Response()
-    Resolver(new URI(req.getUri()).getPath().stripPrefix("/")) match {
-      case Some(redirect) => {
-        response.setStatusCode(303)
-        response.addHeader("Location", redirect)
+    val resolution = Resolver(new URI(req.getUri()).getPath().stripPrefix("/"))
+    req.getHeader("Accept") match {
+      case "application/json" => {
+        response.setStatusCode(200)
+    	  resolution match {
+    	    case Some(redirect) => response.contentString = "{ redirect: '" + redirect + "' }"
+    	    case None => response.contentString = "{}"
+    	  }
       }
-      case None => {
-        response.setStatusCode(404)
+      case _ => {
+        resolution match {
+          case Some(redirect) => {
+            response.setStatusCode(303)
+            response.addHeader("Location", redirect)
+          }
+          case None => {
+            response.setStatusCode(404)
+          }
+        }
       }
     }
     Future(response)
