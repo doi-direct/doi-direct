@@ -26,6 +26,9 @@ class ResolverService extends Service[HttpRequest, HttpResponse] {
   def apply(req: HttpRequest): Future[HttpResponse] = {
     val response = Response()
     val resolution = Resolver(new URI(req.getUri()).getPath().stripPrefix("/"))
+    
+    println(req.getHeader("Accept"))
+    
     req.getHeader("Accept") match {
       case "application/json" => {
         response.setStatusCode(200)
