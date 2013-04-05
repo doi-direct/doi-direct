@@ -30,8 +30,8 @@ class ResolverService extends Service[HttpRequest, HttpResponse] {
       case "application/json" => {
         response.setStatusCode(200)
     	  resolution match {
-    	    case Some(redirect) => response.contentString = "{ redirect: '" + redirect + "' }"
-    	    case None => response.contentString = "{}"
+    	    case Some(redirect) => response.contentString = "{ redirect: \"" + redirect + "\" }"
+    	    case None => response.contentString = "{  }"
     	  }
       }
       case _ => {
