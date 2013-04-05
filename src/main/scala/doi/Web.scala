@@ -26,26 +26,26 @@ class ResolverService extends Service[HttpRequest, HttpResponse] {
   def apply(req: HttpRequest): Future[HttpResponse] = {
     val response = Response()
     val resolution = Resolver(new URI(req.getUri()).getPath().stripPrefix("/"))
-    
-    println(req.getHeader("Accept"))
-    
-    req.getHeader("Accept") match {
-      case "application/json" => {
-        response.setStatusCode(200)
-    	  resolution match {
-    	    case Some(redirect) => response.contentString = "{ redirect: \"" + redirect + "\" }"
-    	    case None => response.contentString = "{  }"
-    	  }
+
+    val json = req.getHeader("Accept").split(", ").contains("application/json")
+
+    if (json) {
+      println(" ... sending JSON response")
+      response.setStatusCode(200)
+      resolution match {
+        case Some(redirect) => response.contentString = "{ redirect: \"" + redirect + "\" }"
+        case None => response.contentString = "{  }"
       }
-      case _ => {
-        resolution match {
-          case Some(redirect) => {
-            response.setStatusCode(303)
-            response.addHeader("Location", redirect)
-          }
-          case None => {
-            response.setStatusCode(404)
-          }
+    } else {
+      resolution match {
+        case Some(redirect) => {
+          println(" ... sending 303 redirect")
+          response.setStatusCode(303)
+          response.addHeader("Location", redirect)
+        }
+        case None => {
+          println(" ... sending 404")
+          response.setStatusCode(404)
         }
       }
     }
