@@ -36,7 +36,7 @@ class ResolverService extends Service[HttpRequest, HttpResponse] {
         case Some(redirect) => response.contentString = """"{ "redirect": """" + redirect + """" }"""
         case None => response.contentString = "{  }"
       }
-      response.setContentString("application/json")
+      response.setContentType("application/json")
     } else {
       resolution match {
         case Some(redirect) => {
