@@ -33,7 +33,7 @@ class ResolverService extends Service[HttpRequest, HttpResponse] {
       println(" ... sending JSON response")
       response.setStatusCode(200)
       resolution match {
-        case Some(redirect) => response.contentString = """"{ "redirect": """" + redirect + """" }"""
+        case Some(redirect) => response.contentString = """{ "redirect": """" + redirect + """" }"""
         case None => response.contentString = "{  }"
       }
       response.setContentType("application/json")
