@@ -70,7 +70,7 @@ object Resolver extends App {
       // ...
       
       // 10.2307/2586590 --> http://www.jstor.org/stable/pdfplus/2586590.pdf
-      case doi if doi.startsWith("10.2307/") => Some("http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/"))
+      case doi if doi.startsWith("10.2307/") => Some("http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true")
       
       // Quantum Topology
       // 10.4171/QT/16 --> http://www.ems-ph.org/journals/show_pdf.php?issn=1663-487X&vol=2&iss=2&rank=1
