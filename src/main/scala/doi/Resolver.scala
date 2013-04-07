@@ -6,15 +6,19 @@ import java.net.HttpURLConnection
 
 object Resolver extends App {
 
+  val cache = scala.collection.mutable.Map[String, Option[String]]()
+
   def fallback(doi: String): Option[String] = {
-    println(" ... falling back to dx.doi.org")
-    val connection = new URL("http://dx.doi.org/" + doi).openConnection().asInstanceOf[HttpURLConnection]
-    connection.setInstanceFollowRedirects(false);
-    if (connection.getResponseCode == 303) {
-      Some(connection.getHeaderField("Location"))
-    } else {
-      None
-    }
+    cache.getOrElseUpdate(doi, {
+      println(" ... falling back to dx.doi.org")
+      val connection = new URL("http://dx.doi.org/" + doi).openConnection().asInstanceOf[HttpURLConnection]
+      connection.setInstanceFollowRedirects(false);
+      if (connection.getResponseCode == 303) {
+        Some(connection.getHeaderField("Location"))
+      } else {
+        None
+      }
+    })
   }
 
   def apply(doi: String): Option[String] = {
@@ -31,7 +35,7 @@ object Resolver extends App {
 
       // 10.1017, Cambridge University Press
       // 10.1017/S0022112010001734 --> http://journals.cambridge.org/action/displayFulltext?type=1&fid=7829676&jid=FLM&volumeId=655&issueId=-1&aid=7829674&bodyId=&membershipNumber=&societyETOCSession=
-      //						   --> http://journals.cambridge.org.virtual.anu.edu.au/download.php?file=%2FFLM%2FFLM655%2FS0022112010001734a.pdf&code=ac265aacb742b93fa69d566e33aeaf5e
+      //						   --> http://journals.cambridge.org/download.php?file=%2FFLM%2FFLM655%2FS0022112010001734a.pdf&code=ac265aacb742b93fa69d566e33aeaf5e
 
       // 10.1051 is also CUP
 
@@ -57,6 +61,22 @@ object Resolver extends App {
         Some("http://www.ams.org/books/" + series + "/" + volume + "/" + series + volume + ".pdf")
       }
 
+      // ...
+
+      // World Scientific 
+      // 10.1142/S0218216502001779 --> http://www.worldscientific.com/doi/abs/10.1142/S0218216502001779 --> http://www.worldscientific.com/doi/pdf/10.1142/S0218216502001779
+      case doi if doi.startsWith("10.1142/") => Some("http://www.worldscientific.com/doi/pdf/" + doi)
+
+      // ...
+      
+      // 10.2307/2586590 --> http://www.jstor.org/stable/pdfplus/2586590.pdf
+      case doi if doi.startsWith("10.2307/") => Some("http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/"))
+      
+      // Quantum Topology
+      // 10.4171/QT/16 --> http://www.ems-ph.org/journals/show_pdf.php?issn=1663-487X&vol=2&iss=2&rank=1
+      
+      // 10.1093/imrn/rnp169 --> http://imrn.oxfordjournals.org/content/2010/6/1062.full.pdf
+      
       case _ => fallback(doi)
     }
 
