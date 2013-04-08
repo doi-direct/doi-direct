@@ -16,7 +16,8 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
 	"com.twitter" %% "finagle-core" % "6.1.0",
 	"com.twitter" %% "finagle-http" % "6.1.0",
-	"org.apache.httpcomponents" % "httpclient" % "4.1.2"
+	"commons-io" % "commons-io" % "2.4",
+	"org.apache.httpcomponents" % "httpclient" % "4.2.1"
 )
 
 // Test dependencies

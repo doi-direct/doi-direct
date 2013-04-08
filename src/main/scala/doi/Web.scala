@@ -25,30 +25,36 @@ object Web {
 class ResolverService extends Service[HttpRequest, HttpResponse] {
   def apply(req: HttpRequest): Future[HttpResponse] = {
     val response = Response()
-    val resolution = Resolver(new URI(req.getUri()).getPath().stripPrefix("/"))
 
-    val json = req.getHeader("Accept").split(", ").contains("application/json")
+    val query = new URI(req.getUri()).getPath().stripPrefix("/")
+    if (query.startsWith("10.")) {
+      val resolution = Resolver(query)
 
-    if (json) {
-      println(" ... sending JSON response")
-      response.setStatusCode(200)
-      resolution match {
-        case Some(redirect) => response.contentString = """{ "redirect": """" + redirect + """" }"""
-        case None => response.contentString = "{  }"
+      val json = req.getHeader("Accept").split(", ").contains("application/json")
+
+      if (json) {
+        println(" ... sending JSON response")
+        response.setStatusCode(200)
+        resolution match {
+          case Some(redirect) => response.contentString = """{ "redirect": """" + redirect + """" }"""
+          case None => response.contentString = "{  }"
+        }
+        response.setContentType("application/json")
+      } else {
+        resolution match {
+          case Some(redirect) => {
+            println(" ... sending 303 redirect")
+            response.setStatusCode(303)
+            response.addHeader("Location", redirect)
+          }
+          case None => {
+            println(" ... sending 404")
+            response.setStatusCode(404)
+          }
+        }
       }
-      response.setContentType("application/json")
     } else {
-      resolution match {
-        case Some(redirect) => {
-          println(" ... sending 303 redirect")
-          response.setStatusCode(303)
-          response.addHeader("Location", redirect)
-        }
-        case None => {
-          println(" ... sending 404")
-          response.setStatusCode(404)
-        }
-      }
+      response.setStatusCode(404)
     }
     Future(response)
   }
