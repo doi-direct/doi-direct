@@ -182,7 +182,7 @@ object Resolver {
     // 							---links to---> http://msp.org/pjm/2010/247-2/pjm-v247-n2-p04-s.pdf
     // unfortunately that "04" doesn't come from the metadata
     case doi if doi.startsWith("10.2140") => {
-      selectLink(jQuery(doi).get("table.action a.download-caption").first).map(h => "http://msp.org/" + h)
+      selectLink(jQuery(doi).get("table.action a.download-caption").first).map(h => "http://msp.org" + h)
     }
 
     // American Institute of Physics
