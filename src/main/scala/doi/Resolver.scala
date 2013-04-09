@@ -8,46 +8,54 @@ import net.tqft.util.Html
 import net.tqft.util.FirefoxSlurp
 import com.gargoylesoftware.htmlunit.html.HtmlPage
 import be.roam.hue.doj.Doj
+import net.tqft.toolkit.amazon.AnonymousS3
+import org.apache.http.HttpException
 
 trait Resolution
 case class jQuery(query: String) extends Resolution
 
 object Resolver {
 
-  def resolveLocallyRule: String => Option[String] = {
-    case doi if doi.startsWith("10.1002/") => Some("http://onlinelibrary.wiley.com/doi/" + doi + "/pdf")
-    // 10.1023/A:1015622607840 ---resolves to---> http://link.springer.com/article/10.1023%2FA%3A1015622607840
-    // 						   ---links to---> http://link.springer.com/content/pdf/10.1023%2FA%3A1015622607840
-    case doi if doi.startsWith("10.1007/") || doi.startsWith("10.1023") => Some("http://link.springer.com/content/pdf/" + doi)
-    case doi if doi.startsWith("10.1080/") => Some("http://www.tandfonline.com/doi/pdf/" + doi)
-    // 10.1088/0951-7715/23/12/012 --> http://iopscience.iop.org/0951-7715/23/12/012/pdf/0951-7715_23_12_012.pdf
-    case doi if doi.startsWith("10.1088/") => Some("http://iopscience.iop.org/" + doi.stripPrefix("10.1088/") + "/pdf/" + doi.stripPrefix("10.1088/").replace('/', '_') + ".pdf")
-    // 10.1089/cmb.2008.0023 --> http://online.liebertpub.com/doi/pdf/10.1089/cmb.2008.0023
-    case doi if doi.startsWith("10.1089/") => Some("http://online.liebertpub.com/doi/pdf/" + doi)
-    // World Scientific 
-    // 10.1142/S0218216502001779 ---resolves to---> http://www.worldscientific.com/doi/abs/10.1142/S0218216502001779
-    //						   ---follow "PDF ("---> http://www.worldscientific.com/doi/pdf/10.1142/S0218216502001779
-    case doi if doi.startsWith("10.1142/") => Some("http://www.worldscientific.com/doi/pdf/" + doi)
-    // 10.2307/2586590 --> http://www.jstor.org/stable/pdfplus/2586590.pdf?acceptTC=true
-    case doi if doi.startsWith("10.2307/") => Some("http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true")
-    // 10.1090/conm/517/10488 --> http://www.ams.org/books/conm/517/conm517.pdf
-    case doi if doi.startsWith("10.1090/conm/") || doi.startsWith("10.1090/pspum/") => {
-      val List(_, series, volume, _) = doi.split('/').toList
-      Some("http://www.ams.org/books/" + series + "/" + volume + "/" + series + volume + ".pdf")
+  type =>?[-A, +B] = PartialFunction[A, B]
+
+  def resolveLocally(doi: String): Option[String] = {
+    val rules: String =>? String = {
+      // Wiley
+      case doi if doi.startsWith("10.1002/") => "http://onlinelibrary.wiley.com/doi/" + doi + "/pdf"
+      // Springer
+      // 10.1023/A:1015622607840 ---resolves to---> http://link.springer.com/article/10.1023%2FA%3A1015622607840
+      // 						   ---links to---> http://link.springer.com/content/pdf/10.1023%2FA%3A1015622607840
+      case doi if doi.startsWith("10.1007/") || doi.startsWith("10.1023") => "http://link.springer.com/content/pdf/" + doi
+      case doi if doi.startsWith("10.1080/") => "http://www.tandfonline.com/doi/pdf/" + doi
+      // 10.1088/0951-7715/23/12/012 --> http://iopscience.iop.org/0951-7715/23/12/012/pdf/0951-7715_23_12_012.pdf
+      case doi if doi.startsWith("10.1088/") => "http://iopscience.iop.org/" + doi.stripPrefix("10.1088/") + "/pdf/" + doi.stripPrefix("10.1088/").replace('/', '_') + ".pdf"
+      // 10.1089/cmb.2008.0023 --> http://online.liebertpub.com/doi/pdf/10.1089/cmb.2008.0023
+      case doi if doi.startsWith("10.1089/") => "http://online.liebertpub.com/doi/pdf/" + doi
+      // World Scientific 
+      // 10.1142/S0218216502001779 ---resolves to---> http://www.worldscientific.com/doi/abs/10.1142/S0218216502001779
+      //						   ---links to---> http://www.worldscientific.com/doi/pdf/10.1142/S0218216502001779
+      case doi if doi.startsWith("10.1142/") => "http://www.worldscientific.com/doi/pdf/" + doi
+      // JSTOR
+      // 10.2307/2586590 --> http://www.jstor.org/stable/pdfplus/2586590.pdf?acceptTC=true
+      case doi if doi.startsWith("10.2307/") => "http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true"
+      // 10.1090/conm/517/10488 --> http://www.ams.org/books/conm/517/conm517.pdf
+      case doi if doi.startsWith("10.1090/conm/") || doi.startsWith("10.1090/pspum/") => {
+        val List(_, series, volume, _) = doi.split('/').toList
+        "http://www.ams.org/books/" + series + "/" + volume + "/" + series + volume + ".pdf"
+      }
+      // 10.4007/annals.2011.174.3.5 --> http://annals.math.princeton.edu/wp-content/uploads/annals-v174-n3-p05-s.pdf
+      case doi if doi.startsWith("10.4007") => {
+        val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
+        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf"
+      }
+      // 10.3842/SIGMA.2008.059  ---resolves to---> http://www.emis.de/journals/SIGMA/2008/059/
+      // 						   ---links to---> http://www.emis.de/journals/SIGMA/2008/059/sigma08-059.pdf
+      case doi if doi.startsWith("10.3842") => {
+        val List("SIGMA", year, paper) = doi.stripPrefix("10.3842/").split('.').toList
+        "http://www.emis.de/journals/SIGMA/" + year + "/" + paper + "/sigma" + year.takeRight(2) + "-" + paper + ".pdf"
+      }
     }
-    // 10.4007/annals.2011.174.3.5 --> http://annals.math.princeton.edu/wp-content/uploads/annals-v174-n3-p05-s.pdf
-    case doi if doi.startsWith("10.4007") => {
-      val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
-      Some("http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf")
-    }
-    // 10.3842/SIGMA.2008.059  ---resolves to---> http://www.emis.de/journals/SIGMA/2008/059/
-    // 						   ---links to---> http://www.emis.de/journals/SIGMA/2008/059/sigma08-059.pdf
-    case doi if doi.startsWith("10.3842") => {
-      val List("SIGMA", year, paper) = doi.stripPrefix("10.3842/").split('.').toList
-      Some("http://www.emis.de/journals/SIGMA/" + year + "/" + paper + "/sigma" + year.takeRight(2) + "-" + paper + ".pdf")
-    }
-    
-    case _ => None
+    rules.lift(doi)
   }
 
   def padLeft(string: String, padding: Char, length: Int) = {
@@ -154,88 +162,70 @@ object Resolver {
     case doi if doi.startsWith("10.2140") => {
       selectLink(Html.jQuery("http://dx.doi.org/" + doi).get("table.action a.download-caption").first).map(h => "http://msp.org/" + h)
     }
-    
+
     case _ => None
   }
 
-  // FIXME persist this
-  val resolveLocallyCache = scala.collection.mutable.Map[String, String]()
+  val resolveRemotelyCache = AnonymousS3("DOI2pdf")
 
-  def resolveLocally(doi: String): Option[String] = {
-    resolveLocallyCache.get(doi) match {
+  def resolveRemotely(doi: String): Option[String] = {
+    resolveRemotelyCache.get(doi) match {
       case Some(result) => Some(result)
       case None => {
-        val attempt = resolveLocallyRule(doi)
-        attempt.map(result => resolveLocallyCache.put(doi, result))
+        val attempt = resolveUsingMetadataRule(doi).orElse(resolveViaDXRule(doi)).orElse(resolveByScrapingRule(doi))
+        attempt.map(result => resolveRemotelyCache.put(doi, result))
         attempt
       }
     }
   }
 
-  // FIXME persist this
-  val resolveUsingMetadataCache = scala.collection.mutable.Map[String, String]()
-
-  def resolveUsingMetadata(doi: String): Option[String] = {
-    resolveUsingMetadataCache.get(doi) match {
-      case Some(result) => Some(result)
-      case None => {
-        val attempt = resolveUsingMetadataRule(doi)
-        attempt.map(result => resolveUsingMetadataCache.put(doi, result))
-        attempt
-      }
-    }
-  }
-
-  // FIXME persist this
-  val resolveByScrapingCache = scala.collection.mutable.Map[String, String]()
-
-  def resolveByScraping(doi: String): Option[String] = {
-    resolveByScrapingCache.get(doi) match {
-      case Some(result) => Some(result)
-      case None => {
-        val attempt = resolveByScrapingRule(doi)
-        attempt.map(result => resolveByScrapingCache.put(doi, result))
-        attempt
-      }
-    }
-  }
-
-  // FIXME persist this
-  val fallbackCache = scala.collection.mutable.Map[String, Option[String]]()
+  val dxCache = AnonymousS3("dx.doi.org")
 
   def resolveViaDX(doi: String): Option[String] = {
-    fallbackCache.getOrElseUpdate(doi, {
-      println(" ... falling back to dx.doi.org")
-      val connection = new URL("http://dx.doi.org/" + doi).openConnection().asInstanceOf[HttpURLConnection]
-      connection.setInstanceFollowRedirects(false);
-      if (connection.getResponseCode == 303) {
-        Some(resolveViaDXRule(connection.getHeaderField("Location")))
-      } else {
-        None
-      }
-    })
+    try {
+      Some(dxCache.getOrElseUpdate(doi, {
+        println(" ... looking up dx.doi.org")
+        val connection = new URL("http://dx.doi.org/" + doi).openConnection().asInstanceOf[HttpURLConnection]
+        connection.setInstanceFollowRedirects(false);
+        if (connection.getResponseCode == 303) {
+          connection.getHeaderField("Location")
+        } else {
+          throw new HttpException(connection.getResponseMessage())
+        }
+      }))
+    } catch {
+      case e: HttpException => None
+    }
   }
 
-  def resolveViaDXRule: String => String = {
+  def resolveViaDXRule: String => Option[String] = {
     // 10.1215/00127094-1548371 ---resolves to---> http://projecteuclid.org/euclid.dmj/1330610810
     // 											   http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdfview_1&handle=euclid.dmj/1330610810
-    case url if url.startsWith("http://projecteuclid.org/euclid./") => "http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdfview_1&handle=" + url.stripPrefix("http://projecteuclid.org/")
-
-    // 10.1515/crll.2000.019 ---resolves to---> http://www.degruyter.com/view/j/crll.2000.2000.issue-519/crll.2000.019/crll.2000.019.xml
-    //										   ---links to---> http://www.degruyter.com/dg/viewarticle.fullcontentlink:pdfeventlink/$002fj$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml?t:ac=j$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml
-    // N.B degruyter send a header: "Content-Disposition: attachment; filename=crll.2000.019.pdf" which means Chrome won't show the PDF inline.
-    case url if url.startsWith("http://www.degruyter.com/view/j/") => {
-      val identifier = url.stripPrefix("http://www.degruyter.com/view/").replaceAllLiterally("/", "$002f")
-      "http://www.degruyter.com/dg/viewarticle.fullcontentlink:pdfeventlink/$002f" + identifier + "?t:ac=" + identifier
+    case doi if doi.startsWith("10.1215") => {
+      resolveViaDX(doi).map({ url =>
+        require(url.startsWith("http://projecteuclid.org/"))
+        "http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdfview_1&handle=" + url.stripPrefix("http://projecteuclid.org/")
+      })
     }
 
-    case url => url
+    // 10.1515/crll.2000.019 ---resolves to---> http://www.degruyter.com/view/j/crll.2000.2000.issue-519/crll.2000.019/crll.2000.019.xml
+    //						 ---links to---> http://www.degruyter.com/dg/viewarticle.fullcontentlink:pdfeventlink/$002fj$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml?t:ac=j$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml
+    // N.B degruyter send a header: "Content-Disposition: attachment; filename=crll.2000.019.pdf" which means Chrome won't show the PDF inline.
+    case doi if doi.startsWith("10.1515") => {
+      resolveViaDX(doi).map({ url =>
+        require(url.startsWith("http://www.degruyter.com/view/"))
+        val identifier = url.stripPrefix("http://www.degruyter.com/view/").replaceAllLiterally("/", "$002f")
+        "http://www.degruyter.com/dg/viewarticle.fullcontentlink:pdfeventlink/$002f" + identifier + "?t:ac=" + identifier
+      })
+    }
+
+    case _ => None
   }
 
   def apply(doi: String): Option[String] = {
     println("resolving " + doi)
 
-    val result = resolveLocally(doi).orElse(resolveUsingMetadata(doi)).orElse(resolveByScraping(doi)).orElse(resolveViaDX(doi))
+    val result = resolveLocally(doi).orElse(resolveRemotely(doi))
 
     result match {
       case Some(url) => println(" ... resolved to " + url)

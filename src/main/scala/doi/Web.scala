@@ -48,8 +48,8 @@ class ResolverService extends Service[HttpRequest, HttpResponse] {
             response.addHeader("Location", redirect)
           }
           case None => {
-            println(" ... sending 404")
-            response.setStatusCode(404)
+            println(" ... sending 303 redirect to http://dx.doi.org")
+            response.addHeader("Location", "http://dx.doi.org/" + query)
           }
         }
       }
