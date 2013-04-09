@@ -35,6 +35,10 @@ object Resolver {
       // 10.1142/S0218216502001779 ---resolves to---> http://www.worldscientific.com/doi/abs/10.1142/S0218216502001779
       //						   ---links to---> http://www.worldscientific.com/doi/pdf/10.1142/S0218216502001779
       case doi if doi.startsWith("10.1142/") => "http://www.worldscientific.com/doi/pdf/" + doi
+      // SIAM
+      // http://dx.doi.org/10.1137/S1064827599357024 ---resolves to---> http://epubs.siam.org/doi/abs/10.1137/S1064827599357024
+      //											 ---links to--->    http://epubs.siam.org/doi/pdf/10.1137/S1064827599357024
+      case doi if doi.startsWith("10.1137/") => "http://epubs.siam.org/doi/pdf/" + doi
       // JSTOR
       // 10.2307/2586590 --> http://www.jstor.org/stable/pdfplus/2586590.pdf?acceptTC=true
       case doi if doi.startsWith("10.2307/") => "http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true"
@@ -54,6 +58,7 @@ object Resolver {
         val List("SIGMA", year, paper) = doi.stripPrefix("10.3842/").split('.').toList
         "http://www.emis.de/journals/SIGMA/" + year + "/" + paper + "/sigma" + year.takeRight(2) + "-" + paper + ".pdf"
       }
+      
     }
     rules.lift(doi)
   }
@@ -119,22 +124,30 @@ object Resolver {
     }
   }
 
+  def jQuery(doi: String) = Html.jQuery("http://dx.doi.org/" + doi)
+  
   val resolveByScrapingRule: String => Option[String] = {
+    // Unfortunately Elsevier doesn't work.
+    
     // 10.1006 10.1016, Elsevier, has complicated URLs, e.g.
     // 10.1006/jabr.1996.0306 ---resolves to---> http://www.sciencedirect.com/science/article/pii/S0021869396903063
-    //						---follow "PDF" (or jQuery "#pdfLink")---> http://pdn.sciencedirect.com/science?_ob=MiamiImageURL&_cid=272332&_user=10&_pii=S0021869396903063&_check=y&_origin=article&_zone=toolbar&_coverDate=1996--15&view=c&originContentFamily=serial&wchp=dGLbVlt-zSkWz&md5=fb951ad4ff13953e97dc2afd6fd16d4a&pid=1-s2.0-S0021869396903063-main.pdf
+    //						  ---follow link---> http://pdn.sciencedirect.com/science?_ob=MiamiImageURL&_cid=272332&_user=10&_pii=S0021869396903063&_check=y&_origin=article&_zone=toolbar&_coverDate=1996--15&view=c&originContentFamily=serial&wchp=dGLbVlt-zSkWz&md5=fb951ad4ff13953e97dc2afd6fd16d4a&pid=1-s2.0-S0021869396903063-main.pdf
     //                        ---resolves to---> http://ac.els-cdn.com/S0021869396903063/1-s2.0-S0021869396903063-main.pdf?_tid=756d984e-a048-11e2-8b82-00000aab0f02&acdnat=1365424565_666b1bf7394bbc91c15fac27d45952a0
-    case doi if doi.startsWith("10.1006") || doi.startsWith("10.1016") => {
-      val scrape = Html.jQuery("http://dx.doi.org/" + doi).get("#pdfLink")
-      selectLink(scrape).map(h => "http://pdn.sciencedirect.com/" + h.stripPrefix("http://pdn.sciencedirect.com/"))
-    }
+    // 10.1016/0167-6687(83)90020-3 ---resolves to---> http://www.sciencedirect.com/science/article/pii/0167668783900203#
+    //                              ---follow link (from campus)---> http://pdn.sciencedirect.com/science?_ob=MiamiImageURL&_cid=271685&_user=554534&_pii=0167668783900203&_check=y&_origin=article&_zone=toolbar&_coverDate=30-Apr-1983&view=c&originContentFamily=serial&wchp=dGLbVlt-zSkzS&md5=729643f534e9cc7abe5882e10cca9e40&pid=1-s2.0-0167668783900203-main.pdf
+    // 								---follow link (off campus)----> http://pdn.sciencedirect.com/science?_ob=ShoppingCartURL&_method=add&_eid=1-s2.0-0167668783900203&originContentFamily=serial&_origin=article&_acct=C000228598&_version=1&_userid=10&_ts=1365482216&md5=ecfe2869e3c92d58e7f05c5762d02d90
+    
+//    case doi if doi.startsWith("10.1006") || doi.startsWith("10.1016") => {
+//      val scrape = jQuery(doi).get("#pdfLink")
+//      selectLink(scrape).map(h => "http://pdn.sciencedirect.com" + h.stripPrefix("http://pdn.sciencedirect.com"))
+//    }
 
     // 10.1017 10.1051, Cambridge University Press also has complicated URLs:
     // 10.1017/S0022112010001734 ---resolves to---> http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=7829674
     //						   ---follow "View PDF (" (or jQuery for "a.article-pdf")---> http://journals.cambridge.org/action/displayFulltext?type=1&fid=7829676&jid=FLM&volumeId=655&issueId=-1&aid=7829674&bodyId=&membershipNumber=&societyETOCSession=
     //						   ---resolves to---> http://journals.cambridge.org/download.php?file=%2FFLM%2FFLM655%2FS0022112010001734a.pdf&code=ac265aacb742b93fa69d566e33aeaf5e
     case doi if doi.startsWith("10.1017") || doi.startsWith("10.1051") => {
-      val scrape = Html.jQuery("http://dx.doi.org/" + doi).get("a.article-pdf")
+      val scrape = jQuery(doi).get("a.article-pdf")
       selectLink(scrape).map(h => "http://journals.cambridge.org/action/" + h.replaceAll("\n", "").replaceAll("\t", "").replaceAll(" ", ""))
     }
 
@@ -150,7 +163,7 @@ object Resolver {
     // Quantum Topology
     // 10.4171/QT/16 --> http://www.ems-ph.org/journals/show_pdf.php?issn=1663-487X&vol=2&iss=2&rank=1
     case doi if doi.startsWith("10.4171") => {
-      selectLink(Html.jQuery("http://dx.doi.org/" + doi).get("#content a").first).map(h => "http://www.ems-ph.org" + h)
+      selectLink(jQuery(doi).get("#content a").first).map(h => "http://www.ems-ph.org" + h)
     }
 
     // ...
@@ -160,9 +173,16 @@ object Resolver {
     // 							---links to---> http://msp.org/pjm/2010/247-2/pjm-v247-n2-p04-s.pdf
     // unfortunately that "04" doesn't come from the metadata
     case doi if doi.startsWith("10.2140") => {
-      selectLink(Html.jQuery("http://dx.doi.org/" + doi).get("table.action a.download-caption").first).map(h => "http://msp.org/" + h)
+      selectLink(jQuery(doi).get("table.action a.download-caption").first).map(h => "http://msp.org/" + h)
     }
 
+    // American Institute of Physics
+    // http://dx.doi.org/10.1063/1.864184 ---resolves to---> http://pof.aip.org/resource/1/pfldas/v26/i3/p684_s1
+    // 									  ---links to---> http://scitation.aip.org/getpdf/servlet/GetPDFServlet?filetype=pdf&id=PFLDAS000026000003000684000001&idtype=cvips&doi=10.1063/1.864184&prog=normal
+    case doi if doi.startsWith("10.1063") => {
+      selectLink(jQuery(doi).get("li.fulltextdesc a").first)
+    }
+    
     case _ => None
   }
 
