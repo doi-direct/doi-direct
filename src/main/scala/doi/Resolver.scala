@@ -31,32 +31,32 @@ object Resolver {
       case doi if doi.startsWith("10.1088/") => "http://iopscience.iop.org/" + doi.stripPrefix("10.1088/") + "/pdf/" + doi.stripPrefix("10.1088/").replace('/', '_') + ".pdf"
       // 10.1089/cmb.2008.0023 --> http://online.liebertpub.com/doi/pdf/10.1089/cmb.2008.0023
       case doi if doi.startsWith("10.1089/") => "http://online.liebertpub.com/doi/pdf/" + doi
-      // World Scientific 
-      // 10.1142/S0218216502001779 ---resolves to---> http://www.worldscientific.com/doi/abs/10.1142/S0218216502001779
-      //						   ---links to---> http://www.worldscientific.com/doi/pdf/10.1142/S0218216502001779
-      case doi if doi.startsWith("10.1142/") => "http://www.worldscientific.com/doi/pdf/" + doi
-      // SIAM
-      // http://dx.doi.org/10.1137/S1064827599357024 ---resolves to---> http://epubs.siam.org/doi/abs/10.1137/S1064827599357024
-      //											 ---links to--->    http://epubs.siam.org/doi/pdf/10.1137/S1064827599357024
-      case doi if doi.startsWith("10.1137/") => "http://epubs.siam.org/doi/pdf/" + doi
-      // JSTOR
-      // 10.2307/2586590 --> http://www.jstor.org/stable/pdfplus/2586590.pdf?acceptTC=true
-      case doi if doi.startsWith("10.2307/") => "http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true"
       // 10.1090/conm/517/10488 --> http://www.ams.org/books/conm/517/conm517.pdf
       case doi if doi.startsWith("10.1090/conm/") || doi.startsWith("10.1090/pspum/") => {
         val List(_, series, volume, _) = doi.split('/').toList
         "http://www.ams.org/books/" + series + "/" + volume + "/" + series + volume + ".pdf"
       }
-      // 10.4007/annals.2011.174.3.5 --> http://annals.math.princeton.edu/wp-content/uploads/annals-v174-n3-p05-s.pdf
-      case doi if doi.startsWith("10.4007") => {
-        val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
-        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf"
-      }
+      // SIAM
+      // http://dx.doi.org/10.1137/S1064827599357024 ---resolves to---> http://epubs.siam.org/doi/abs/10.1137/S1064827599357024
+      //											 ---links to--->    http://epubs.siam.org/doi/pdf/10.1137/S1064827599357024
+      case doi if doi.startsWith("10.1137/") => "http://epubs.siam.org/doi/pdf/" + doi
+      // World Scientific 
+      // 10.1142/S0218216502001779 ---resolves to---> http://www.worldscientific.com/doi/abs/10.1142/S0218216502001779
+      //						   ---links to---> http://www.worldscientific.com/doi/pdf/10.1142/S0218216502001779
+      case doi if doi.startsWith("10.1142/") => "http://www.worldscientific.com/doi/pdf/" + doi
+      // JSTOR
+      // 10.2307/2586590 --> http://www.jstor.org/stable/pdfplus/2586590.pdf?acceptTC=true
+      case doi if doi.startsWith("10.2307/") => "http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true"
       // 10.3842/SIGMA.2008.059  ---resolves to---> http://www.emis.de/journals/SIGMA/2008/059/
       // 						   ---links to---> http://www.emis.de/journals/SIGMA/2008/059/sigma08-059.pdf
       case doi if doi.startsWith("10.3842") => {
         val List("SIGMA", year, paper) = doi.stripPrefix("10.3842/").split('.').toList
         "http://www.emis.de/journals/SIGMA/" + year + "/" + paper + "/sigma" + year.takeRight(2) + "-" + paper + ".pdf"
+      }
+      // 10.4007/annals.2011.174.3.5 --> http://annals.math.princeton.edu/wp-content/uploads/annals-v174-n3-p05-s.pdf
+      case doi if doi.startsWith("10.4007") => {
+        val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
+        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf"
       }
       
     }
@@ -82,25 +82,6 @@ object Resolver {
       }
     }
 
-    // 10.1112/jtopol/jtq033 --> http://jtopol.oxfordjournals.org/content/4/1/190.full.pdf
-    case doi if doi.startsWith("10.1112/jtopol") => {
-      Article.fromDOI(doi) flatMap { article =>
-        article.pageStart map { start =>
-          "http://jtopol.oxfordjournals.org/content/" + article.volume + "/" + article.number + "/" + start + ".full.pdf"
-        }
-      }
-    }
-
-    // 10.1093/imrn/rnp169 --> http://imrn.oxfordjournals.org/content/2010/6/1062.full.pdf
-    // 10.1155/S1073792891000041 --> http://imrn.oxfordjournals.org/content/2000/1/23.full.pdf
-    case doi if doi.startsWith("10.1093/imrn") || doi.startsWith("10.1155/S10737928") => {
-      Article.fromDOI(doi) flatMap { article =>
-        article.pageStart map { start =>
-          "http://imrn.oxfordjournals.org/content/" + article.year + "/" + article.number + "/" + start + ".full.pdf"
-        }
-      }
-    }
-
     // 10.1090, the AMS
     // 10.1090/S0002-9904-1897-00411-6 --> http://www.ams.org/journals/bull/1897-03-07/S0002-9904-1897-00411-6/S0002-9904-1897-00411-6.pdf
     // 10.1090/S0002-9947-2010-05210-9 --> http://www.ams.org/journals/tran/2011-363-05/S0002-9947-2010-05210-9/S0002-9947-2010-05210-9.pdf
@@ -119,6 +100,25 @@ object Resolver {
           case "Electron. Res. Announc. Amer. Math. Soc." => "era"
         }
         Some("http://www.ams.org/journals/" + journalCode + "/" + article.year + "-" + padLeft(article.volume.toString, '0', 2) + "-" + padLeft(article.number.toString, '0', 2) + "/" + identifier + "/" + identifier + ".pdf")
+      }
+    }
+
+    // 10.1093/imrn/rnp169 --> http://imrn.oxfordjournals.org/content/2010/6/1062.full.pdf
+    // 10.1155/S1073792891000041 --> http://imrn.oxfordjournals.org/content/2000/1/23.full.pdf
+    case doi if doi.startsWith("10.1093/imrn") || doi.startsWith("10.1155/S10737928") => {
+      Article.fromDOI(doi) flatMap { article =>
+        article.pageStart map { start =>
+          "http://imrn.oxfordjournals.org/content/" + article.year + "/" + article.number + "/" + start + ".full.pdf"
+        }
+      }
+    }
+
+    // 10.1112/jtopol/jtq033 --> http://jtopol.oxfordjournals.org/content/4/1/190.full.pdf
+    case doi if doi.startsWith("10.1112/jtopol") => {
+      Article.fromDOI(doi) flatMap { article =>
+        article.pageStart map { start =>
+          "http://jtopol.oxfordjournals.org/content/" + article.volume + "/" + article.number + "/" + start + ".full.pdf"
+        }
       }
     }
 
@@ -160,6 +160,13 @@ object Resolver {
       selectLink(scrape).map(h => "http://journals.cambridge.org/action/" + h.replaceAll("\n", "").replaceAll("\t", "").replaceAll(" ", ""))
     }
 
+    // American Institute of Physics
+    // http://dx.doi.org/10.1063/1.864184 ---resolves to---> http://pof.aip.org/resource/1/pfldas/v26/i3/p684_s1
+    // 									  ---links to---> http://scitation.aip.org/getpdf/servlet/GetPDFServlet?filetype=pdf&id=PFLDAS000026000003000684000001&idtype=cvips&doi=10.1063/1.864184&prog=normal
+    case doi if doi.startsWith("10.1063") => {
+      selectLink(jQuery(doi).get("li.fulltextdesc a").first)
+    }
+    
     // 10.1070/IM2010v074n04ABEH002503 ---resolves to---> http://mr.crossref.org/iPage/?doi=10.1070%2FIM2010v074n04ABEH002503
     //								 ---follow "IOP Publishing"---> http://iopscience.iop.org/1064-5632/74/4/A03/
     // 								 ---follow "Full text PDF"--> http://iopscience.iop.org/1064-5632/74/4/A03/pdf/1064-5632_74_4_A03.pdf
@@ -169,14 +176,6 @@ object Resolver {
       selectLink(links).map(h => "http://iopscience.iop.org/" + h)
     }
 
-    // Quantum Topology
-    // 10.4171/QT/16 --> http://www.ems-ph.org/journals/show_pdf.php?issn=1663-487X&vol=2&iss=2&rank=1
-    case doi if doi.startsWith("10.4171") => {
-      selectLink(jQuery(doi).get("#content a").first).map(h => "http://www.ems-ph.org" + h)
-    }
-
-    // ...
-
     // Mathematical Sciences Publishers
     // 10.2140/pjm.2010.247.323 ---resolves to---> http://msp.org/pjm/2010/247-2/p04.xhtml
     // 							---links to---> http://msp.org/pjm/2010/247-2/pjm-v247-n2-p04-s.pdf
@@ -185,13 +184,12 @@ object Resolver {
       selectLink(jQuery(doi).get("table.action a.download-caption").first).map(h => "http://msp.org/" + h)
     }
 
-    // American Institute of Physics
-    // http://dx.doi.org/10.1063/1.864184 ---resolves to---> http://pof.aip.org/resource/1/pfldas/v26/i3/p684_s1
-    // 									  ---links to---> http://scitation.aip.org/getpdf/servlet/GetPDFServlet?filetype=pdf&id=PFLDAS000026000003000684000001&idtype=cvips&doi=10.1063/1.864184&prog=normal
-    case doi if doi.startsWith("10.1063") => {
-      selectLink(jQuery(doi).get("li.fulltextdesc a").first)
+    // Quantum Topology
+    // 10.4171/QT/16 --> http://www.ems-ph.org/journals/show_pdf.php?issn=1663-487X&vol=2&iss=2&rank=1
+    case doi if doi.startsWith("10.4171") => {
+      selectLink(jQuery(doi).get("#content a").first).map(h => "http://www.ems-ph.org" + h)
     }
-    
+
     case _ => None
   }
 
