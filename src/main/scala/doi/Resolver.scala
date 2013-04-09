@@ -126,7 +126,7 @@ object Resolver {
     //                        ---resolves to---> http://ac.els-cdn.com/S0021869396903063/1-s2.0-S0021869396903063-main.pdf?_tid=756d984e-a048-11e2-8b82-00000aab0f02&acdnat=1365424565_666b1bf7394bbc91c15fac27d45952a0
     case doi if doi.startsWith("10.1006") || doi.startsWith("10.1016") => {
       val scrape = Html.jQuery("http://dx.doi.org/" + doi).get("#pdfLink")
-      selectLink(scrape)
+      selectLink(scrape).map(h => "http://pdn.sciencedirect.com/" + h.stripPrefix("http://pdn.sciencedirect.com/"))
     }
 
     // 10.1017 10.1051, Cambridge University Press also has complicated URLs:
