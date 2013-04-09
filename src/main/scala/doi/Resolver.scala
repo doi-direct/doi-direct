@@ -103,11 +103,20 @@ object Resolver {
 
     // 10.1090, the AMS
     // 10.1090/S0002-9904-1897-00411-6 --> http://www.ams.org/journals/bull/1897-03-07/S0002-9904-1897-00411-6/S0002-9904-1897-00411-6.pdf
+    // 10.1090/S0002-9947-2010-05210-9 --> http://www.ams.org/journals/tran/2011-363-05/S0002-9947-2010-05210-9/S0002-9947-2010-05210-9.pdf
     case doi if doi.startsWith("10.1090") => {
       Article.fromDOI(doi) flatMap { article =>
         val identifier = doi.stripPrefix("10.1090/")
         val journalCode = article.bibtex.get("JOURNAL").get match {
           case "Bull. Amer. Math. Soc." => "bull"
+          case "Trans. Amer. Math. Soc." => "tran"
+          case "Represent. Theory" => "ert"
+          case "Conform. Geom. Dyn." => "ecgd"
+          case "J. Amer. Math. Soc." => "jams"
+          case "Proc. Amer. Math. Soc." => "proc"
+          case "Math. Comp." => "mcom"
+          case "Mem. Amer. Math. Soc." => "memo"
+          case "Electron. Res. Announc. Amer. Math. Soc." => "era"
         }
         Some("http://www.ams.org/journals/" + journalCode + "/" + article.year + "-" + padLeft(article.volume.toString, '0', 2) + "-" + padLeft(article.number.toString, '0', 2) + "/" + identifier + "/" + identifier + ".pdf")
       }
