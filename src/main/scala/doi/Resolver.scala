@@ -161,6 +161,7 @@ object Resolver {
     //      selectLink(scrape).map(h => "http://pdn.sciencedirect.com" + h.stripPrefix("http://pdn.sciencedirect.com"))
     //    }
 
+    // FIXME this seems to be broken?
     // 10.1017 10.1051, Cambridge University Press also has complicated URLs:
     // 10.1017/S0022112010001734 ---resolves to---> http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=7829674
     //						   ---follow "View PDF (" (or jQuery for "a.article-pdf")---> http://journals.cambridge.org/action/displayFulltext?type=1&fid=7829676&jid=FLM&volumeId=655&issueId=-1&aid=7829674&bodyId=&membershipNumber=&societyETOCSession=
