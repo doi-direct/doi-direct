@@ -16,7 +16,9 @@ object Resolver {
 
   def resolveLocallyRule: String => Option[String] = {
     case doi if doi.startsWith("10.1002/") => Some("http://onlinelibrary.wiley.com/doi/" + doi + "/pdf")
-    case doi if doi.startsWith("10.1007/") => Some("http://link.springer.com/content/pdf/" + doi)
+    // 10.1023/A:1015622607840 ---resolves to---> http://link.springer.com/article/10.1023%2FA%3A1015622607840
+    // 						   ---links to---> http://link.springer.com/content/pdf/10.1023%2FA%3A1015622607840
+    case doi if doi.startsWith("10.1007/") || doi.startsWith("10.1023") => Some("http://link.springer.com/content/pdf/" + doi)
     case doi if doi.startsWith("10.1080/") => Some("http://www.tandfonline.com/doi/pdf/" + doi)
     // 10.1088/0951-7715/23/12/012 --> http://iopscience.iop.org/0951-7715/23/12/012/pdf/0951-7715_23_12_012.pdf
     case doi if doi.startsWith("10.1088/") => Some("http://iopscience.iop.org/" + doi.stripPrefix("10.1088/") + "/pdf/" + doi.stripPrefix("10.1088/").replace('/', '_') + ".pdf")
@@ -38,17 +40,24 @@ object Resolver {
       val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
       Some("http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf")
     }
+    // 10.3842/SIGMA.2008.059  ---resolves to---> http://www.emis.de/journals/SIGMA/2008/059/
+    // 						   ---links to---> http://www.emis.de/journals/SIGMA/2008/059/sigma08-059.pdf
+    case doi if doi.startsWith("10.3842") => {
+      val List("SIGMA", year, paper) = doi.stripPrefix("10.3842/").split('.').toList
+      Some("http://www.emis.de/journals/SIGMA/" + year + "/" + paper + "/sigma" + year.takeRight(2) + "-" + paper + ".pdf")
+    }
+    
     case _ => None
   }
 
   def padLeft(string: String, padding: Char, length: Int) = {
-    if(length > string.size) {
+    if (length > string.size) {
       padding.toString * (length - string.size) + string
     } else {
       string
     }
   }
-  
+
   def resolveUsingMetadataRule: String => Option[String] = {
     // 10.1073/pnas.1001947107         ---resolves to---> http://www.pnas.org/content/107/32/14030
     //								 ---follow "Full Text (PDF)"---> http://www.pnas.org/content/107/32/14030.full.pdf
@@ -59,21 +68,33 @@ object Resolver {
         }
       }
     }
+
+    // 10.1112/jtopol/jtq033 --> http://jtopol.oxfordjournals.org/content/4/1/190.full.pdf
+    case doi if doi.startsWith("10.1112/jtopol") => {
+      Article.fromDOI(doi) flatMap { article =>
+        article.pageStart map { start =>
+          "http://jtopol.oxfordjournals.org/content/" + article.volume + "/" + article.number + "/" + start + ".full.pdf"
+        }
+      }
+    }
+
     // 10.1093/imrn/rnp169 --> http://imrn.oxfordjournals.org/content/2010/6/1062.full.pdf
-    case doi if doi.startsWith("10.1093/imrn") => {
+    // 10.1155/S1073792891000041 --> http://imrn.oxfordjournals.org/content/2000/1/23.full.pdf
+    case doi if doi.startsWith("10.1093/imrn") || doi.startsWith("10.1155/S10737928") => {
       Article.fromDOI(doi) flatMap { article =>
         article.pageStart map { start =>
           "http://imrn.oxfordjournals.org/content/" + article.year + "/" + article.number + "/" + start + ".full.pdf"
         }
       }
     }
+
     // 10.1090, the AMS
     // 10.1090/S0002-9904-1897-00411-6 --> http://www.ams.org/journals/bull/1897-03-07/S0002-9904-1897-00411-6/S0002-9904-1897-00411-6.pdf
     case doi if doi.startsWith("10.1090") => {
       Article.fromDOI(doi) flatMap { article =>
         val identifier = doi.stripPrefix("10.1090/")
         val journalCode = article.bibtex.get("JOURNAL").get match {
-          case "Bull. Amer. Math. Soc." => "bull" 
+          case "Bull. Amer. Math. Soc." => "bull"
         }
         Some("http://www.ams.org/journals/" + journalCode + "/" + article.year + "-" + padLeft(article.volume.toString, '0', 2) + "-" + padLeft(article.number.toString, '0', 2) + "/" + identifier + "/" + identifier + ".pdf")
       }
@@ -126,6 +147,14 @@ object Resolver {
 
     // ...
 
+    // Mathematical Sciences Publishers
+    // 10.2140/pjm.2010.247.323 ---resolves to---> http://msp.org/pjm/2010/247-2/p04.xhtml
+    // 							---links to---> http://msp.org/pjm/2010/247-2/pjm-v247-n2-p04-s.pdf
+    // unfortunately that "04" doesn't come from the metadata
+    case doi if doi.startsWith("10.2140") => {
+      selectLink(Html.jQuery("http://dx.doi.org/" + doi).get("table.action a.download-caption").first).map(h => "http://msp.org/" + h)
+    }
+    
     case _ => None
   }
 
@@ -191,9 +220,18 @@ object Resolver {
     // 10.1215/00127094-1548371 ---resolves to---> http://projecteuclid.org/euclid.dmj/1330610810
     // 											   http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdfview_1&handle=euclid.dmj/1330610810
     case url if url.startsWith("http://projecteuclid.org/euclid./") => "http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdfview_1&handle=" + url.stripPrefix("http://projecteuclid.org/")
+
+    // 10.1515/crll.2000.019 ---resolves to---> http://www.degruyter.com/view/j/crll.2000.2000.issue-519/crll.2000.019/crll.2000.019.xml
+    //										   ---links to---> http://www.degruyter.com/dg/viewarticle.fullcontentlink:pdfeventlink/$002fj$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml?t:ac=j$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml
+    // N.B degruyter send a header: "Content-Disposition: attachment; filename=crll.2000.019.pdf" which means Chrome won't show the PDF inline.
+    case url if url.startsWith("http://www.degruyter.com/view/j/") => {
+      val identifier = url.stripPrefix("http://www.degruyter.com/view/").replaceAllLiterally("/", "$002f")
+      "http://www.degruyter.com/dg/viewarticle.fullcontentlink:pdfeventlink/$002f" + identifier + "?t:ac=" + identifier
+    }
+
     case url => url
   }
-  
+
   def apply(doi: String): Option[String] = {
     println("resolving " + doi)
 
