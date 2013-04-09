@@ -9,15 +9,15 @@ resolvers ++= Seq(
 	"Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
 	"Sonatype Nexus Releases" at "https://oss.sonatype.org/content/repositories/releases",
 	"Scala Snapshots" at "http://scala-tools.org/repo-snapshots/",
-	"twitter-repo" at "http://maven.twttr.com"
+	"twitter-repo" at "http://maven.twttr.com",
+	"tqft.net Maven repository" at "http://tqft.net/releases" 
 )
 
 // Project dependencies
 libraryDependencies ++= Seq(
 	"com.twitter" %% "finagle-core" % "6.1.0",
 	"com.twitter" %% "finagle-http" % "6.1.0",
-	"commons-io" % "commons-io" % "2.4",
-	"org.apache.httpcomponents" % "httpclient" % "4.2.1"
+	"net.tqft" %% "arxiv-toolkit" % "0.1.0-SNAPSHOT"
 )
 
 // Test dependencies
