@@ -33,6 +33,11 @@ object Resolver {
       val List(_, series, volume, _) = doi.split('/').toList
       Some("http://www.ams.org/books/" + series + "/" + volume + "/" + series + volume + ".pdf")
     }
+    // 10.4007/annals.2011.174.3.5 --> http://annals.math.princeton.edu/wp-content/uploads/annals-v174-n3-p05-s.pdf
+    case doi if doi.startsWith("10.4007") => {
+      val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
+      Some("http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf")
+    }
     case _ => None
   }
 
@@ -175,13 +180,20 @@ object Resolver {
       val connection = new URL("http://dx.doi.org/" + doi).openConnection().asInstanceOf[HttpURLConnection]
       connection.setInstanceFollowRedirects(false);
       if (connection.getResponseCode == 303) {
-        Some(connection.getHeaderField("Location"))
+        Some(resolveViaDXRule(connection.getHeaderField("Location")))
       } else {
         None
       }
     })
   }
 
+  def resolveViaDXRule: String => String = {
+    // 10.1215/00127094-1548371 ---resolves to---> http://projecteuclid.org/euclid.dmj/1330610810
+    // 											   http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdfview_1&handle=euclid.dmj/1330610810
+    case url if url.startsWith("http://projecteuclid.org/euclid./") => "http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdfview_1&handle=" + url.stripPrefix("http://projecteuclid.org/")
+    case url => url
+  }
+  
   def apply(doi: String): Option[String] = {
     println("resolving " + doi)
 
