@@ -58,7 +58,14 @@ object Resolver {
         val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
         "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf"
       }
-      
+
+      // 10.1512/iumj.2009.58.3518 ---resolves to---> http://www.iumj.indiana.edu/IUMJ/fulltext.php?artid=3518&year=2009&volume=58
+      //						   ---links to--->    http://www.iumj.indiana.edu/IUMJ/FTDLOAD/2009/58/3518/pdf
+      case doi if doi.startsWith("10.1512/iumj") => {
+        val List("iumj", year, volume, articleId) = doi.stripPrefix("10.1512/").split('.').toList
+        "http://www.iumj.indiana.edu/IUMJ/FTDLOAD/" + year + "/" + volume + "/" + articleId + "/pdf"
+      }
+
     }
     rules.lift(doi)
   }
@@ -114,10 +121,13 @@ object Resolver {
     }
 
     // 10.1112/jtopol/jtq033 --> http://jtopol.oxfordjournals.org/content/4/1/190.full.pdf
-    case doi if doi.startsWith("10.1112/jtopol") => {
+    // 10.1112/plms/pdq011 ---resolves to---> http://plms.oxfordjournals.org/content/102/1/25
+    //					   ---links to--->    http://plms.oxfordjournals.org/content/102/1/25.full.pdf
+    case doi if doi.startsWith("10.1112") => {
+      val List("10.1112", journal, _) = doi.split('/').toList
       Article.fromDOI(doi) flatMap { article =>
         article.pageStart map { start =>
-          "http://jtopol.oxfordjournals.org/content/" + article.volume + "/" + article.number + "/" + start + ".full.pdf"
+          "http://" + journal + ".oxfordjournals.org/content/" + article.volume + "/" + article.number + "/" + start + ".full.pdf"
         }
       }
     }
@@ -134,10 +144,10 @@ object Resolver {
   }
 
   def jQuery(doi: String) = Html.jQuery("http://dx.doi.org/" + doi)
-  
+
   val resolveByScrapingRule: String => Option[String] = {
-    // Unfortunately Elsevier doesn't work.
-    
+    // Unfortunately Elsevier doesn't work if you're not logged in.
+
     // 10.1006 10.1016, Elsevier, has complicated URLs, e.g.
     // 10.1006/jabr.1996.0306 ---resolves to---> http://www.sciencedirect.com/science/article/pii/S0021869396903063
     //						  ---follow link---> http://pdn.sciencedirect.com/science?_ob=MiamiImageURL&_cid=272332&_user=10&_pii=S0021869396903063&_check=y&_origin=article&_zone=toolbar&_coverDate=1996--15&view=c&originContentFamily=serial&wchp=dGLbVlt-zSkWz&md5=fb951ad4ff13953e97dc2afd6fd16d4a&pid=1-s2.0-S0021869396903063-main.pdf
@@ -145,11 +155,11 @@ object Resolver {
     // 10.1016/0167-6687(83)90020-3 ---resolves to---> http://www.sciencedirect.com/science/article/pii/0167668783900203#
     //                              ---follow link (from campus)---> http://pdn.sciencedirect.com/science?_ob=MiamiImageURL&_cid=271685&_user=554534&_pii=0167668783900203&_check=y&_origin=article&_zone=toolbar&_coverDate=30-Apr-1983&view=c&originContentFamily=serial&wchp=dGLbVlt-zSkzS&md5=729643f534e9cc7abe5882e10cca9e40&pid=1-s2.0-0167668783900203-main.pdf
     // 								---follow link (off campus)----> http://pdn.sciencedirect.com/science?_ob=ShoppingCartURL&_method=add&_eid=1-s2.0-0167668783900203&originContentFamily=serial&_origin=article&_acct=C000228598&_version=1&_userid=10&_ts=1365482216&md5=ecfe2869e3c92d58e7f05c5762d02d90
-    
-//    case doi if doi.startsWith("10.1006") || doi.startsWith("10.1016") => {
-//      val scrape = jQuery(doi).get("#pdfLink")
-//      selectLink(scrape).map(h => "http://pdn.sciencedirect.com" + h.stripPrefix("http://pdn.sciencedirect.com"))
-//    }
+
+    //    case doi if doi.startsWith("10.1006") || doi.startsWith("10.1016") => {
+    //      val scrape = jQuery(doi).get("#pdfLink")
+    //      selectLink(scrape).map(h => "http://pdn.sciencedirect.com" + h.stripPrefix("http://pdn.sciencedirect.com"))
+    //    }
 
     // 10.1017 10.1051, Cambridge University Press also has complicated URLs:
     // 10.1017/S0022112010001734 ---resolves to---> http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=7829674
@@ -160,13 +170,6 @@ object Resolver {
       selectLink(scrape).map(h => "http://journals.cambridge.org/action/" + h.replaceAll("\n", "").replaceAll("\t", "").replaceAll(" ", ""))
     }
 
-    // American Institute of Physics
-    // http://dx.doi.org/10.1063/1.864184 ---resolves to---> http://pof.aip.org/resource/1/pfldas/v26/i3/p684_s1
-    // 									  ---links to---> http://scitation.aip.org/getpdf/servlet/GetPDFServlet?filetype=pdf&id=PFLDAS000026000003000684000001&idtype=cvips&doi=10.1063/1.864184&prog=normal
-    case doi if doi.startsWith("10.1063") => {
-      selectLink(jQuery(doi).get("li.fulltextdesc a").first)
-    }
-    
     // 10.1070/IM2010v074n04ABEH002503 ---resolves to---> http://mr.crossref.org/iPage/?doi=10.1070%2FIM2010v074n04ABEH002503
     //								 ---follow "IOP Publishing"---> http://iopscience.iop.org/1064-5632/74/4/A03/
     // 								 ---follow "Full text PDF"--> http://iopscience.iop.org/1064-5632/74/4/A03/pdf/1064-5632_74_4_A03.pdf
@@ -243,6 +246,26 @@ object Resolver {
         require(url.startsWith("http://www.degruyter.com/view/"))
         val identifier = url.stripPrefix("http://www.degruyter.com/view/").replaceAllLiterally("/", "$002f")
         "http://www.degruyter.com/dg/viewarticle.fullcontentlink:pdfeventlink/$002f" + identifier + "?t:ac=" + identifier
+      })
+    }
+
+    // American Institute of Physics
+    // http://dx.doi.org/10.1063/1.864184 ---resolves to---> http://link.aip.org/link/PFLDAS/v26/i3/p684/s1&Agg=doi
+    // 									  ---links to---> http://scitation.aip.org/getpdf/servlet/GetPDFServlet?filetype=pdf&id=PFLDAS000026000003000684000001&idtype=cvips&doi=10.1063/1.864184&prog=normal
+    case doi if doi.startsWith("10.1063") => {
+      // This only works while logged in:
+      //      selectLink(jQuery(doi).get("li.fulltextdesc a").first)
+      resolveViaDX(doi).map({ url =>
+        println(url)
+        require(url.startsWith("http://link.aip.org/link/"))
+        val fragments = url.stripPrefix("http://link.aip.org/link/").stripSuffix("&Agg=doi").split('/')
+        "http://scitation.aip.org/getpdf/servlet/GetPDFServlet?filetype=pdf&id=" +
+          fragments(0).toUpperCase() +
+          padLeft(fragments(1).stripPrefix("v"), '0', 6) +
+          padLeft(fragments(2).stripPrefix("i"), '0', 6) +
+          padLeft(fragments(3).stripPrefix("p"), '0', 6) +
+          padLeft(fragments(4).stripPrefix("s"), '0', 6) +
+          "&idtype=cvips&doi=" + doi + "&prog=normal"
       })
     }
 
