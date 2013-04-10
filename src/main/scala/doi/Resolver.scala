@@ -11,11 +11,12 @@ import be.roam.hue.doj.Doj
 import net.tqft.toolkit.amazon.AnonymousS3
 import org.apache.http.HttpException
 import com.github.theon.uri.Uri
+import net.tqft.toolkit.Logging
 
 trait Resolution
 case class jQuery(query: String) extends Resolution
 
-object Resolver {
+object Resolver extends Logging {
 
   type =>?[-A, +B] = PartialFunction[A, B]
 
@@ -251,13 +252,24 @@ object Resolver {
   }
 
   def resolveViaDXRule: String => Option[String] = {
-    // 10.1215/00127094-1548371 ---resolves to---> http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.dmj/1330610810
-	//							---links to--->    http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.dmj/1330610810
+    // 10.1215/00127094-1548371 ---resolves to---> http://projecteuclid.org/Dienst/getRecord?id=euclid.dmj/1330610810/
+    //							---resolves to---> http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.dmj/1330610810
+    //							---links to--->    http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.dmj/1330610810
     // 10.1215/S0012-7094-92-06702-0 ---resolves to---> http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.dmj/1077294270
     //								 ---links to--->    http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.dmj/1077294270
     case doi if doi.startsWith("10.1215") => {
-      resolveViaDX(doi).map({ uri =>
-        "http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=" + (uri: Uri).query.params("handle")
+      resolveViaDX(doi).flatMap({ uriString =>
+        val uri: Uri = uriString
+        println(uriString)
+        val handle = uri.path.stripPrefix("/").split('/').toList match {
+          case "Dienst" :: _ => Some(uri.query.params("id").head.stripSuffix("/"))
+          case "DPubs" :: _ => Some(uri.query.params("handle").head)
+          case _ => {
+            warn("Unfamiliar DOI resolution for project euclid, please check " + doi)
+            None
+          }
+        }
+        handle map { h => "http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=" + h }
       })
     }
 
