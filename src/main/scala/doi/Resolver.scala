@@ -22,9 +22,12 @@ object Resolver extends Logging {
 
   def resolveLocally(doi: String): Option[String] = {
     val rules: String =>? String = {
-      // FIXME actually this is an HTML page wrapping the PDF
       // Wiley
-      //      case doi if doi.startsWith("10.1002/") => "http://onlinelibrary.wiley.com/doi/" + doi + "/pdf"
+      // 10.1002/(SICI)1097-0312(199602)49:2<85::AID-CPA1>3.0.CO;2-2 ---resolves to---> http://onlinelibrary.wiley.com/doi/10.1002/(SICI)1097-0312(199602)49:2%3C85::AID-CPA1%3E3.0.CO;2-2/abstract
+      // 															 ---links to--->    http://onlinelibrary.wiley.com/doi/10.1002/(SICI)1097-0312(199602)49:2%3C85::AID-CPA1%3E3.0.CO;2-2/pdf
+      //															 ---resolves to---> http://onlinelibrary.wiley.com/store/10.1002/(SICI)1097-0312(199602)49:2%3C85::AID-CPA1%3E3.0.CO;2-2/asset/1_ftp.pdf?v=1&t=hfc3fjoo&s=dc6fad69f11cfc2ff2f302f5d1386c553d48f47c
+      // maybe something complicated going on here; I thought I'd seen an HTML wrapper appearing, but now don't
+      case doi if doi.startsWith("10.1002/") => "http://onlinelibrary.wiley.com/doi/" + doi + "/pdf"
       // Springer
       // 10.1023/A:1015622607840 ---resolves to---> http://link.springer.com/article/10.1023%2FA%3A1015622607840
       // 						   ---links to---> http://link.springer.com/content/pdf/10.1023%2FA%3A1015622607840
@@ -123,6 +126,13 @@ object Resolver extends Logging {
             case "Math. Comp." => "mcom"
             case "Mem. Amer. Math. Soc." => "memo"
             case "Electron. Res. Announc. Amer. Math. Soc." => "era"
+            // FIXME work these out:
+            case "Algebra i Analiz" => ???
+            case "Int. Math. Res. Not. IMRN" => ???
+            case "J. Algebraic Geom." => ???
+            case "J. London Math. Soc. (2)" => ???
+            case "J. Reine Angew. Math." => ???
+
           }
           Some("http://www.ams.org/journals/" + journalCode + "/" + article.year + "-" + padLeft(article.volume.toString, '0', 2) + "-" + padLeft(article.number.toString, '0', 2) + "/" + identifier + "/" + identifier + ".pdf")
         }
@@ -175,31 +185,6 @@ object Resolver extends Logging {
   def jQuery(doi: String) = Html.jQuery("http://dx.doi.org/" + doi)
 
   val resolveByScrapingRule: String => Option[String] = {
-    // Unfortunately Elsevier doesn't work if you're not logged in.
-
-    // 10.1006 10.1016, Elsevier, has complicated URLs, e.g.
-    // 10.1006/jabr.1996.0306 ---resolves to---> http://www.sciencedirect.com/science/article/pii/S0021869396903063
-    //						  ---follow link---> http://pdn.sciencedirect.com/science?_ob=MiamiImageURL&_cid=272332&_user=10&_pii=S0021869396903063&_check=y&_origin=article&_zone=toolbar&_coverDate=1996--15&view=c&originContentFamily=serial&wchp=dGLbVlt-zSkWz&md5=fb951ad4ff13953e97dc2afd6fd16d4a&pid=1-s2.0-S0021869396903063-main.pdf
-    //                        ---resolves to---> http://ac.els-cdn.com/S0021869396903063/1-s2.0-S0021869396903063-main.pdf?_tid=756d984e-a048-11e2-8b82-00000aab0f02&acdnat=1365424565_666b1bf7394bbc91c15fac27d45952a0
-    // 10.1016/0167-6687(83)90020-3 ---resolves to---> http://www.sciencedirect.com/science/article/pii/0167668783900203#
-    //                              ---follow link (from campus)---> http://pdn.sciencedirect.com/science?_ob=MiamiImageURL&_cid=271685&_user=554534&_pii=0167668783900203&_check=y&_origin=article&_zone=toolbar&_coverDate=30-Apr-1983&view=c&originContentFamily=serial&wchp=dGLbVlt-zSkzS&md5=729643f534e9cc7abe5882e10cca9e40&pid=1-s2.0-0167668783900203-main.pdf
-    // 								---follow link (off campus)----> http://pdn.sciencedirect.com/science?_ob=ShoppingCartURL&_method=add&_eid=1-s2.0-0167668783900203&originContentFamily=serial&_origin=article&_acct=C000228598&_version=1&_userid=10&_ts=1365482216&md5=ecfe2869e3c92d58e7f05c5762d02d90
-
-    //    case doi if doi.startsWith("10.1006") || doi.startsWith("10.1016") => {
-    //      val scrape = jQuery(doi).get("#pdfLink")
-    //      selectLink(scrape).map(h => "http://pdn.sciencedirect.com" + h.stripPrefix("http://pdn.sciencedirect.com"))
-    //    }
-
-    // FIXME this seems to be broken?
-    // 10.1017 10.1051, Cambridge University Press also has complicated URLs:
-    // 10.1017/S0022112010001734 ---resolves to---> http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=7829674
-    //						   ---follow "View PDF (" (or jQuery for "a.article-pdf")---> http://journals.cambridge.org/action/displayFulltext?type=1&fid=7829676&jid=FLM&volumeId=655&issueId=-1&aid=7829674&bodyId=&membershipNumber=&societyETOCSession=
-    //						   ---resolves to---> http://journals.cambridge.org/download.php?file=%2FFLM%2FFLM655%2FS0022112010001734a.pdf&code=ac265aacb742b93fa69d566e33aeaf5e
-    case doi if doi.startsWith("10.1017") || doi.startsWith("10.1051") => {
-      val scrape = jQuery(doi).get("a.article-pdf")
-      selectLink(scrape).map(h => "http://journals.cambridge.org/action/" + h.replaceAll("\n", "").replaceAll("\t", "").replaceAll(" ", ""))
-    }
-
     // 10.1070/IM2010v074n04ABEH002503 ---resolves to---> http://mr.crossref.org/iPage/?doi=10.1070%2FIM2010v074n04ABEH002503
     //								 ---follow "IOP Publishing"---> http://iopscience.iop.org/1064-5632/74/4/A03/
     // 								 ---follow "Full text PDF"--> http://iopscience.iop.org/1064-5632/74/4/A03/pdf/1064-5632_74_4_A03.pdf
