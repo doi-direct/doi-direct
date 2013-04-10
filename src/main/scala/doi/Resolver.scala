@@ -59,7 +59,7 @@ object Resolver extends Logging {
       case doi if doi.startsWith("10.1142/") => "http://www.worldscientific.com/doi/pdf/" + doi
       // JSTOR
       // 10.2307/2586590 --> http://www.jstor.org/stable/pdfplus/2586590.pdf?acceptTC=true
-      case doi if doi.startsWith("10.2307/") => "http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true"
+      case doi if doi.startsWith("10.2307/") || doi.startsWith("10.4169/") => "http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true"
       // 10.3842/SIGMA.2008.059  ---resolves to---> http://www.emis.de/journals/SIGMA/2008/059/
       // 						   ---links to---> http://www.emis.de/journals/SIGMA/2008/059/sigma08-059.pdf
       case doi if doi.startsWith("10.3842") => {
@@ -248,13 +248,14 @@ object Resolver extends Logging {
     //							---links to--->    http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.dmj/1330610810
     // 10.1215/S0012-7094-92-06702-0 ---resolves to---> http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.dmj/1077294270
     //								 ---links to--->    http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.dmj/1077294270
+    // 10.1215/00127094-1593344 ---resolves to---> http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.dmj/1338987165
     case doi if doi.startsWith("10.1215") => {
       resolveViaDX(doi).flatMap({ uriString =>
         val uri: Uri = uriString
         println(uriString)
         val handle = uri.path.stripPrefix("/").split('/').toList match {
           case "Dienst" :: _ => Some(uri.query.params("id").head.stripSuffix("/"))
-          case "DPubs" :: _ => Some(uri.query.params("handle").head)
+          case "DPubS" :: _ => Some(uri.query.params("handle").head)
           case _ => {
             warn("Unfamiliar DOI resolution for project euclid, please check " + doi)
             None
