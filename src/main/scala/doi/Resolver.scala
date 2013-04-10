@@ -20,8 +20,9 @@ object Resolver {
 
   def resolveLocally(doi: String): Option[String] = {
     val rules: String =>? String = {
+      // FIXME actually this is an HTML page wrapping the PDF
       // Wiley
-      case doi if doi.startsWith("10.1002/") => "http://onlinelibrary.wiley.com/doi/" + doi + "/pdf"
+      //      case doi if doi.startsWith("10.1002/") => "http://onlinelibrary.wiley.com/doi/" + doi + "/pdf"
       // Springer
       // 10.1023/A:1015622607840 ---resolves to---> http://link.springer.com/article/10.1023%2FA%3A1015622607840
       // 						   ---links to---> http://link.springer.com/content/pdf/10.1023%2FA%3A1015622607840
