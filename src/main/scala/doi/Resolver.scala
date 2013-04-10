@@ -37,6 +37,19 @@ object Resolver {
         val List(_, series, volume, _) = doi.split('/').toList
         "http://www.ams.org/books/" + series + "/" + volume + "/" + series + volume + ".pdf"
       }
+      // Oxford University Press
+      // We handle these DOIs below, by looking up metadata
+      // 10.1112/jtopol/jtq033 --> http://jtopol.oxfordjournals.org/content/4/1/190.full.pdf
+      // 10.1112/plms/pdq011 ---resolves to---> http://plms.oxfordjournals.org/content/102/1/25
+      //					   ---links to--->    http://plms.oxfordjournals.org/content/102/1/25.full.pdf+html
+      //					   ---links to--->    http://plms.oxfordjournals.org/content/102/1/25.full.pdf
+      // And these ones here
+      // 10.1112/plms/s3-65.2.423 ---resolves to---> http://plms.oxfordjournals.org/content/s3-65/2/423
+      //							---links to--->    http://plms.oxfordjournals.org/content/s3-65/2/423.full.pdf
+      case doi if doi.startsWith("10.1112") && doi.contains("-") => {
+        val List("10.1112", journal, fragment) = doi.split('/').toList
+        "http://" + journal + ".oxfordjournals.org/content/" + fragment.replaceAllLiterally(".", "/") + ".full.pdf"
+      }
       // SIAM
       // http://dx.doi.org/10.1137/S1064827599357024 ---resolves to---> http://epubs.siam.org/doi/abs/10.1137/S1064827599357024
       //											 ---links to--->    http://epubs.siam.org/doi/pdf/10.1137/S1064827599357024
@@ -121,10 +134,16 @@ object Resolver {
       }
     }
 
+    // Oxford University Press
+    // We handle these DOIs here:
     // 10.1112/jtopol/jtq033 --> http://jtopol.oxfordjournals.org/content/4/1/190.full.pdf
     // 10.1112/plms/pdq011 ---resolves to---> http://plms.oxfordjournals.org/content/102/1/25
+    //					   ---links to--->    http://plms.oxfordjournals.org/content/102/1/25.full.pdf+html
     //					   ---links to--->    http://plms.oxfordjournals.org/content/102/1/25.full.pdf
-    case doi if doi.startsWith("10.1112") => {
+    // And these ones above, by rewriting the DOI
+    // 10.1112/plms/s3-65.2.423 ---resolves to---> http://plms.oxfordjournals.org/content/s3-65/2/423
+    //							---links to--->    http://plms.oxfordjournals.org/content/s3-65/2/423.full.pdf
+    case doi if doi.startsWith("10.1112") && !doi.contains("-") => {
       val List("10.1112", journal, _) = doi.split('/').toList
       Article.fromDOI(doi) flatMap { article =>
         article.pageStart map { start =>
