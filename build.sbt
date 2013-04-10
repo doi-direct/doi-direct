@@ -17,7 +17,8 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
 	"com.twitter" %% "finagle-core" % "6.1.0",
 	"com.twitter" %% "finagle-http" % "6.1.0",
-	"net.tqft" %% "arxiv-toolkit" % "0.1.0-SNAPSHOT"
+	"net.tqft" %% "arxiv-toolkit" % "0.1.0-SNAPSHOT",
+	"com.github.theon" %% "scala-uri" % "0.3.4"
 )
 
 // Test dependencies
