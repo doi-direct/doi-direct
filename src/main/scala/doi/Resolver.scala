@@ -162,6 +162,7 @@ object Resolver extends Logging {
       val journal = doi.split('/').toList match {
         case List("10.1112", journal, _) => journal
         case List("10.1112", fragment) if fragment.startsWith("S00246107") => "jlms"
+        case List("10.1112", fragment) if fragment.startsWith("S00246115") => "plms"
       }
       Article.fromDOI(doi) flatMap { article =>
         article.pageStart map { start =>
