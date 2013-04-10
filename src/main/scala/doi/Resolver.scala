@@ -22,12 +22,6 @@ object Resolver extends Logging {
 
   def resolveLocally(doi: String): Option[String] = {
     val rules: String =>? String = {
-      // Wiley
-      // 10.1002/(SICI)1097-0312(199602)49:2<85::AID-CPA1>3.0.CO;2-2 ---resolves to---> http://onlinelibrary.wiley.com/doi/10.1002/(SICI)1097-0312(199602)49:2%3C85::AID-CPA1%3E3.0.CO;2-2/abstract
-      // 															 ---links to--->    http://onlinelibrary.wiley.com/doi/10.1002/(SICI)1097-0312(199602)49:2%3C85::AID-CPA1%3E3.0.CO;2-2/pdf
-      //															 ---resolves to---> http://onlinelibrary.wiley.com/store/10.1002/(SICI)1097-0312(199602)49:2%3C85::AID-CPA1%3E3.0.CO;2-2/asset/1_ftp.pdf?v=1&t=hfc3fjoo&s=dc6fad69f11cfc2ff2f302f5d1386c553d48f47c
-      // maybe something complicated going on here; I thought I'd seen an HTML wrapper appearing, but now don't
-      case doi if doi.startsWith("10.1002/") => "http://onlinelibrary.wiley.com/doi/" + doi + "/pdf"
       // Springer
       // 10.1023/A:1015622607840 ---resolves to---> http://link.springer.com/article/10.1023%2FA%3A1015622607840
       // 						   ---links to---> http://link.springer.com/content/pdf/10.1023%2FA%3A1015622607840
@@ -159,11 +153,16 @@ object Resolver extends Logging {
     // 10.1112/plms/pdq011 ---resolves to---> http://plms.oxfordjournals.org/content/102/1/25
     //					   ---links to--->    http://plms.oxfordjournals.org/content/102/1/25.full.pdf+html
     //					   ---links to--->    http://plms.oxfordjournals.org/content/102/1/25.full.pdf
+    // 10.1112/S0010437X07003260 looks like it is at OUP, but it's really at CUP
+    // 10.1112/S0024610701002733 ---resolves to---> http://jlms.oxfordjournals.org/content/65/1/223
     // And these ones above, by rewriting the DOI
     // 10.1112/plms/s3-65.2.423 ---resolves to---> http://plms.oxfordjournals.org/content/s3-65/2/423
     //							---links to--->    http://plms.oxfordjournals.org/content/s3-65/2/423.full.pdf
     case doi if doi.startsWith("10.1112") && !doi.contains("-") => {
-      val List("10.1112", journal, _) = doi.split('/').toList
+      val journal = doi.split('/').toList match {
+        case List("10.1112", journal, _) => journal
+        case List("10.1112", fragment) if fragment.startsWith("S00246107") => "jlms"
+      }
       Article.fromDOI(doi) flatMap { article =>
         article.pageStart map { start =>
           "http://" + journal + ".oxfordjournals.org/content/" + article.volume + "/" + article.number + "/" + start + ".full.pdf"
