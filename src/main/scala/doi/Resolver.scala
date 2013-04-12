@@ -254,16 +254,17 @@ object Resolver extends Logging {
     //							---links to--->    http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.dmj/1330610810
     // 10.1215/S0012-7094-92-06702-0 ---resolves to---> http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.dmj/1077294270
     //								 ---links to--->    http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.dmj/1077294270
-    // 10.1215/00127094-1593344 ---resolves to---> http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.dmj/1338987165
+    // 10.1215/00127094-1593344 ---resolves to---> http://projecteuclid.org/euclid.dmj/1338987165
     case doi if doi.startsWith("10.1215") => {
       resolveViaDX(doi).flatMap({ uriString =>
         val uri: Uri = uriString
         println(uriString)
         val handle = uri.path.stripPrefix("/").split('/').toList match {
+          case "euclid.dmj" :: number :: _ => Some("euclid.dmj/" + number)
           case "Dienst" :: _ => Some(uri.query.params("id").head.stripSuffix("/"))
           case "DPubS" :: _ => Some(uri.query.params("handle").head)
           case _ => {
-            warn("Unfamiliar DOI resolution for project euclid, please check " + doi)
+            warn("Unfamiliar DOI resolution for project euclid: " + uri + ", please check " + doi)
             None
           }
         }
