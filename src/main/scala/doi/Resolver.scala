@@ -71,7 +71,12 @@ object Resolver extends Logging {
         val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
         "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf"
       }
-
+      // Homology, Homotopy and Applications
+      // 10.4310/HHA.2012.v14.n1.a5 ---> http://www.intlpress.com/HHA/v14/n1/a5/pdf
+      case doi if doi.startsWith("10.4310") => {
+        val List(journal, year, volume, number, a) = doi.stripPrefix("10.4310/").split('.').toList
+        "http://www.intlpress.com/" + List(journal, volume, number, a, "pdf").mkString("/")
+      }
       // 10.1512/iumj.2009.58.3518 ---resolves to---> http://www.iumj.indiana.edu/IUMJ/fulltext.php?artid=3518&year=2009&volume=58
       //						   ---links to--->    http://www.iumj.indiana.edu/IUMJ/FTDLOAD/2009/58/3518/pdf
       case doi if doi.startsWith("10.1512/iumj") => {
@@ -120,12 +125,11 @@ object Resolver extends Logging {
             case "Math. Comp." => "mcom"
             case "Mem. Amer. Math. Soc." => "memo"
             case "Electron. Res. Announc. Amer. Math. Soc." => "era"
-            // FIXME work these out:
-            case "Algebra i Analiz" => ???
-            case "Int. Math. Res. Not. IMRN" => ???
-            case "J. Algebraic Geom." => ???
-            case "J. London Math. Soc. (2)" => ???
-            case "J. Reine Angew. Math." => ???
+            case "Algebra i Analiz" => "spmj" // Now the St. Petersburg Mathematical Journal
+            case "J. Algebraic Geom." => "jag"
+            case "Int. Math. Res. Not. IMRN" => ??? // Shouldn't actually appear? Mistakes in the BIBTEX?
+            case "J. London Math. Soc. (2)" => ??? // Also a mistake?
+            case "J. Reine Angew. Math." => ??? // also mistakes...
 
           }
           Some("http://www.ams.org/journals/" + journalCode + "/" + article.year + "-" + padLeft(article.volume.toString, '0', 2) + "-" + padLeft(article.number.toString, '0', 2) + "/" + identifier + "/" + identifier + ".pdf")
@@ -139,7 +143,8 @@ object Resolver extends Logging {
 
     // 10.1093/imrn/rnp169 --> http://imrn.oxfordjournals.org/content/2010/6/1062.full.pdf
     // 10.1155/S1073792891000041 --> http://imrn.oxfordjournals.org/content/2000/1/23.full.pdf
-    case doi if doi.startsWith("10.1093/imrn") || doi.startsWith("10.1155/S10737928") => {
+    // 10.1155/IMRN/2006/87604 --> http://imrn.oxfordjournals.org/content/2006/87604.full.pdf
+    case doi if doi.startsWith("10.1093/imrn") || doi.startsWith("10.1155/IMRN") || doi.startsWith("10.1155/S10737928") => {
       Article.fromDOI(doi) flatMap { article =>
         article.pageStart map { start =>
           "http://imrn.oxfordjournals.org/content/" + article.year + "/" + article.number + "/" + start + ".full.pdf"
