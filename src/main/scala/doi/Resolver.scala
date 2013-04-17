@@ -64,6 +64,14 @@ object Resolver extends Logging {
       // 10.1142/S0218216502001779 ---resolves to---> http://www.worldscientific.com/doi/abs/10.1142/S0218216502001779
       //						   ---links to---> http://www.worldscientific.com/doi/pdf/10.1142/S0218216502001779
       case doi if doi.startsWith("10.1142/") => "http://www.worldscientific.com/doi/pdf/" + doi
+
+      // Some IMRN DOIs can be done locally:
+      // 10.1155/IMRN/2006/87604 --> http://imrn.oxfordjournals.org/content/2006/87604.full.pdf
+      // 10.1155/IMRN/2006/36856 --> http://imrn.oxfordjournals.org/content/2006/36856.full.pdf
+      case doi if doi.startsWith("10.1155/IMRN") && doi.count(_ == '/') == 3 => {
+        "http://imrn.oxfordjournals.org/content/" + doi.stripPrefix("10.1155/IMRN/") + ".full.pdf"
+      }
+
       // JSTOR
       // 10.2307/2586590 --> http://www.jstor.org/stable/pdfplus/2586590.pdf?acceptTC=true
       case doi if doi.startsWith("10.2307/") || doi.startsWith("10.4169/") => "http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true"
@@ -93,13 +101,20 @@ object Resolver extends Logging {
         val List("iumj", year, volume, articleId) = doi.stripPrefix("10.1512/").split('.').toList
         "http://www.iumj.indiana.edu/IUMJ/FTDLOAD/" + year + "/" + volume + "/" + articleId + "/pdf"
       }
-      
+
       // 10.4064/fm209-1-5 --resolves to---> http://journals.impan.pl/cgi-bin/doi?fm209-1-5
       //					--links to---> http://journals.impan.pl/cgi-bin/fm/pdf?fm209-1-05
       case doi if doi.startsWith("10.4064") => {
-        val journalAbbreviation =  doi.stripPrefix("10.4064/").take(2)
+        val journalAbbreviation = doi.stripPrefix("10.4064/").take(2)
         val List(volume, number, id) = doi.stripPrefix("10.4064/").stripPrefix(journalAbbreviation).split('-').toList
         "http://journals.impan.pl/cgi-bin/" + journalAbbreviation + "/pdf?" + journalAbbreviation + volume + "-" + number + "-" + padLeft(id, '0', 2)
+      }
+
+      // 10.3842/SIGMA.2011.062 ---resolves to---> http://www.emis.de/journals/SIGMA/2011/062/
+      //                        ---links to---> http://www.emis.de/journals/SIGMA/2011/062/sigma11-062.pdf
+      case doi if doi.startsWith("10.3842/SIGMA") => {
+        val List("SIGMA", year, page) = doi.stripPrefix("10.3842/").split('.').toList
+        "http://www.emis.de/journals/SIGMA/" + year + "/" + page + "/sigma" + year.takeRight(2) + "-" + page + ".pdf"
       }
     }
     rules.lift(doi)
@@ -161,7 +176,10 @@ object Resolver extends Logging {
 
     // 10.1093/imrn/rnp169 --> http://imrn.oxfordjournals.org/content/2010/6/1062.full.pdf
     // 10.1155/S1073792891000041 --> http://imrn.oxfordjournals.org/content/2000/1/23.full.pdf
+    // 10.1155/IMRN.2005.2941 --> http://imrn.oxfordjournals.org/content/2005/48/2941 --> http://imrn.oxfordjournals.org/content/2005/48/2941.full.pdf
+    // Some can be done locally:
     // 10.1155/IMRN/2006/87604 --> http://imrn.oxfordjournals.org/content/2006/87604.full.pdf
+    // 10.1155/IMRN/2006/36856 --> http://imrn.oxfordjournals.org/content/2006/36856.full.pdf
     case doi if doi.startsWith("10.1093/imrn") || doi.startsWith("10.1155/IMRN") || doi.startsWith("10.1155/S10737928") => {
       Article.fromDOI(doi) flatMap { article =>
         article.pageStart map { start =>
