@@ -252,6 +252,7 @@ object Resolver extends Logging {
   def jQuery(doi: String) = Html.jQuery("http://dx.doi.org/" + doi)
 
   val resolveByScrapingRule: String => Option[String] = {
+    // 10.1070/SM1995v186n10ABEH000079 // TODO not working?    
     // 10.1070/IM2010v074n04ABEH002503 ---resolves to---> http://mr.crossref.org/iPage/?doi=10.1070%2FIM2010v074n04ABEH002503
     //								 ---follow "IOP Publishing"---> http://iopscience.iop.org/1064-5632/74/4/A03/
     // 								 ---follow "Full text PDF"--> http://iopscience.iop.org/1064-5632/74/4/A03/pdf/1064-5632_74_4_A03.pdf
@@ -387,7 +388,7 @@ object Resolver extends Logging {
     case doi if doi.startsWith("10.4007/") && doi.count(_ == '.') == 4 => {
       resolveViaDX(doi).map({ url =>
         val List(year, volume, number, id) = url.stripPrefix("http://annals.math.princeton.edu/").split("[/-]").toList
-        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-" + id + "-p.pdf"
+        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-" + id + "-p.pdf" // FIXME, sometimes that -p is incorrect, sadly, e.g. 10.4007/annals.2005.162.581
       })
     }
 
