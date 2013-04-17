@@ -86,7 +86,6 @@ object Resolver extends Logging {
         val List("iumj", year, volume, articleId) = doi.stripPrefix("10.1512/").split('.').toList
         "http://www.iumj.indiana.edu/IUMJ/FTDLOAD/" + year + "/" + volume + "/" + articleId + "/pdf"
       }
-
     }
     rules.lift(doi)
   }
@@ -177,6 +176,34 @@ object Resolver extends Logging {
           "http://" + journal + ".oxfordjournals.org/content/" + article.volume + "/" + article.number + "/" + start + ".full.pdf"
         }
       }
+    }
+
+    // 10.1103/RevModPhys.80.1083  --- resolves to --> http://rmp.aps.org/abstract/RMP/v80/i3/p1083_1
+    //							   --- links to --> http://rmp.aps.org/pdf/RMP/v80/i3/p1083_1
+    // 10.1103/PhysRevLett.101.010501 -- resolves to --> http://prl.aps.org/abstract/PRL/v101/i1/e010501
+    // 								  ---links to---> http://prl.aps.org/pdf/PRL/v101/i1/e010501
+    // 10.1103/PhysRevA.75.032322 --> resolves to --> http://pra.aps.org/abstract/PRA/v75/i3/e032322
+    // 							  ---links to --->    http://pra.aps.org/pdf/PRA/v75/i3/e032322
+    case doi if doi.startsWith("10.1103") && Article.fromDOI(doi).nonEmpty => {
+      val List(journal, volume, page) = doi.stripPrefix("10.1103/").split('.').toList
+      val shortJournal = journal match {
+        case "RevModPhys" => "rmp"
+        case "PhysRevLett" => "prl"
+        case "PhysRevA" => "pra"
+        case "PhysRevB" => "prb"
+        case "PhysRevC" => "prc"
+        case "PhysRevD" => "prd"
+        case "PhysRevE" => "pre"
+        case "PhysRevX" => "prx"
+      }
+      def pageFragment(page: String) = {
+        shortJournal match {
+          case "rmp" => "p" + page + "_1"
+          case sj if sj.startsWith("pr") => "e" + page
+        }
+      }
+      val number = Article.fromDOI(doi).get.number
+      Some("http://" + shortJournal + ".aps.org/pdf/" + shortJournal.toUpperCase + "/v" + volume + "/i" + number + "/" + pageFragment(page))
     }
 
     case _ => None
@@ -313,6 +340,16 @@ object Resolver extends Logging {
         val List(year, volume, number, id) = url.stripPrefix("http://annals.math.princeton.edu/").split("[/-]").toList
         "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-" + id + "-p.pdf"
       })
+    }
+
+    // 10.1103/RevModPhys.80.1083  --- resolves to --> http://rmp.aps.org/abstract/RMP/v80/i3/p1083_1
+    //							   --- links to --> http://rmp.aps.org/pdf/RMP/v80/i3/p1083_1
+    // 10.1103/PhysRevLett.101.010501 -- resolves to --> http://prl.aps.org/abstract/PRL/v101/i1/e010501
+    // 								  ---links to---> http://prl.aps.org/pdf/PRL/v101/i1/e010501
+    // 10.1103/PhysRevA.75.032322 --> resolves to --> http://pra.aps.org/abstract/PRA/v75/i3/e032322
+    // 							  ---links to --->    http://pra.aps.org/pdf/PRA/v75/i3/e032322
+    case doi if doi.startsWith("10.1103") => {
+      resolveViaDX(doi).map({ url => url.replace("abstract", "pdf") })
     }
 
     case _ => None
