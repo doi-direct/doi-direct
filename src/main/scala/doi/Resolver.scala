@@ -31,7 +31,7 @@ object Resolver extends Logging {
       case doi if doi.startsWith("10.1073/pnas") && doi.count(_ == '.') == 4 => {
         "http://www.pnas.org/content/" + doi.stripPrefix("10.1073/pnas.").replaceAllLiterally(".", "/") + ".full.pdf"
       }
-      case doi if doi.startsWith("10.1080/") => "http://www.tandfonline.com/doi/pdf/" + doi
+      case doi if doi.startsWith("10.1080/") || doi.startsWith("10.1081/") => "http://www.tandfonline.com/doi/pdf/" + doi
       // 10.1088/0951-7715/23/12/012 --> http://iopscience.iop.org/0951-7715/23/12/012/pdf/0951-7715_23_12_012.pdf
       case doi if doi.startsWith("10.1088/") => "http://iopscience.iop.org/" + doi.stripPrefix("10.1088/") + "/pdf/" + doi.stripPrefix("10.1088/").replace('/', '_') + ".pdf"
       // 10.1089/cmb.2008.0023 --> http://online.liebertpub.com/doi/pdf/10.1089/cmb.2008.0023
@@ -52,7 +52,7 @@ object Resolver extends Logging {
       //							---links to--->    http://plms.oxfordjournals.org/content/s3-65/2/423.full.pdf
       // 10.1112/blms/14.5.385 ---resolves to---> http://blms.oxfordjournals.org/content/14/5/385
 
-      case doi if doi.startsWith("10.1112") && doi.contains("-") || doi.count(_ == '.') == 3 => {
+      case doi if doi.startsWith("10.1112") && (doi.contains("-") || doi.count(_ == '.') == 3) => {
         val List("10.1112", journal, fragment) = doi.split('/').toList
         "http://" + journal + ".oxfordjournals.org/content/" + fragment.replaceAllLiterally(".", "/") + ".full.pdf"
       }
@@ -77,6 +77,8 @@ object Resolver extends Logging {
       case doi if doi.startsWith("10.2307/") || doi.startsWith("10.4169/") => "http://www.jstor.org/stable/pdfplus/" + doi.stripPrefix("10.2307/") + "?acceptTC=true"
       // 10.3842/SIGMA.2008.059  ---resolves to---> http://www.emis.de/journals/SIGMA/2008/059/
       // 						   ---links to---> http://www.emis.de/journals/SIGMA/2008/059/sigma08-059.pdf
+      // 10.3842/SIGMA.2011.062 ---resolves to---> http://www.emis.de/journals/SIGMA/2011/062/
+      //                        ---links to---> http://www.emis.de/journals/SIGMA/2011/062/sigma11-062.pdf
       case doi if doi.startsWith("10.3842") => {
         val List("SIGMA", year, paper) = doi.stripPrefix("10.3842/").split('.').toList
         "http://www.emis.de/journals/SIGMA/" + year + "/" + paper + "/sigma" + year.takeRight(2) + "-" + paper + ".pdf"
@@ -110,12 +112,7 @@ object Resolver extends Logging {
         "http://journals.impan.pl/cgi-bin/" + journalAbbreviation + "/pdf?" + journalAbbreviation + volume + "-" + number + "-" + padLeft(id, '0', 2)
       }
 
-      // 10.3842/SIGMA.2011.062 ---resolves to---> http://www.emis.de/journals/SIGMA/2011/062/
-      //                        ---links to---> http://www.emis.de/journals/SIGMA/2011/062/sigma11-062.pdf
-      case doi if doi.startsWith("10.3842/SIGMA") => {
-        val List("SIGMA", year, page) = doi.stripPrefix("10.3842/").split('.').toList
-        "http://www.emis.de/journals/SIGMA/" + year + "/" + page + "/sigma" + year.takeRight(2) + "-" + page + ".pdf"
-      }
+      
     }
     rules.lift(doi)
   }
