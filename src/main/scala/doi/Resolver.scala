@@ -111,7 +111,7 @@ object Resolver extends Logging {
         val List(volume, number, id) = doi.stripPrefix("10.4064/").stripPrefix(journalAbbreviation).split('-').toList
         "http://journals.impan.pl/cgi-bin/" + journalAbbreviation + "/pdf?" + journalAbbreviation + volume + "-" + number + "-" + padLeft(id, '0', 2)
       }
-
+      
     }
     rules.lift(doi)
   }
@@ -281,6 +281,16 @@ object Resolver extends Logging {
       selectLink(jQuery(doi).get("div#pdf-link a"))
     }
 
+    // Canad. Math. Bull.
+          // 10.4153/CMB-2010-014-8 --resolves to--> http://cms.math.ca/10.4153/CMB-2010-014-8
+      //                        ---links to---> http://cms.math.ca/cmb/v53/etingofB9125.pdf
+        case doi if doi.startsWith("10.4153/") => {
+      selectLink(jQuery(doi).get("div#readlink a")).map(h => "http://cms.math.ca" + h)
+    }
+
+
+
+    
     case _ => None
   }
 
