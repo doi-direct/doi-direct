@@ -93,6 +93,14 @@ object Resolver extends Logging {
         val List("iumj", year, volume, articleId) = doi.stripPrefix("10.1512/").split('.').toList
         "http://www.iumj.indiana.edu/IUMJ/FTDLOAD/" + year + "/" + volume + "/" + articleId + "/pdf"
       }
+      
+      // 10.4064/fm209-1-5 --resolves to---> http://journals.impan.pl/cgi-bin/doi?fm209-1-5
+      //					--links to---> http://journals.impan.pl/cgi-bin/fm/pdf?fm209-1-05
+      case doi if doi.startsWith("10.4064") => {
+        val journalAbbreviation =  doi.stripPrefix("10.4064/").take(2)
+        val List(volume, number, id) = doi.stripPrefix("10.4064/").stripPrefix(journalAbbreviation).split('-').toList
+        "http://journals.impan.pl/cgi-bin/" + journalAbbreviation + "/pdf?" + journalAbbreviation + volume + "-" + number + padLeft(id, '0', 2)
+      }
     }
     rules.lift(doi)
   }
