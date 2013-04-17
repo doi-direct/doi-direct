@@ -25,7 +25,7 @@ object Resolver extends Logging {
       // Springer
       // 10.1023/A:1015622607840 ---resolves to---> http://link.springer.com/article/10.1023%2FA%3A1015622607840
       // 						   ---links to---> http://link.springer.com/content/pdf/10.1023%2FA%3A1015622607840
-      case doi if doi.startsWith("10.1007/") || doi.startsWith("10.1023") => "http://link.springer.com/content/pdf/" + doi
+      case doi if doi.startsWith("10.1007/") || doi.startsWith("10.1023/") => "http://link.springer.com/content/pdf/" + doi
       // 10.1073/pnas.95.1.98 ---resolves to---> http://www.pnas.org/content/95/1/98
       //	                    ---links to---> http://www.pnas.org/content/95/1/98.full.pdf
       case doi if doi.startsWith("10.1073/pnas") && doi.count(_ == '.') == 4 => {
@@ -52,7 +52,7 @@ object Resolver extends Logging {
       //							---links to--->    http://plms.oxfordjournals.org/content/s3-65/2/423.full.pdf
       // 10.1112/blms/14.5.385 ---resolves to---> http://blms.oxfordjournals.org/content/14/5/385
 
-      case doi if doi.startsWith("10.1112") && (doi.contains("-") || doi.count(_ == '.') == 3) => {
+      case doi if doi.startsWith("10.1112/") && (doi.contains("-") || doi.count(_ == '.') == 3) => {
         val List("10.1112", journal, fragment) = doi.split('/').toList
         "http://" + journal + ".oxfordjournals.org/content/" + fragment.replaceAllLiterally(".", "/") + ".full.pdf"
       }
@@ -79,7 +79,7 @@ object Resolver extends Logging {
       // 						   ---links to---> http://www.emis.de/journals/SIGMA/2008/059/sigma08-059.pdf
       // 10.3842/SIGMA.2011.062 ---resolves to---> http://www.emis.de/journals/SIGMA/2011/062/
       //                        ---links to---> http://www.emis.de/journals/SIGMA/2011/062/sigma11-062.pdf
-      case doi if doi.startsWith("10.3842") => {
+      case doi if doi.startsWith("10.3842/") => {
         val List("SIGMA", year, paper) = doi.stripPrefix("10.3842/").split('.').toList
         "http://www.emis.de/journals/SIGMA/" + year + "/" + paper + "/sigma" + year.takeRight(2) + "-" + paper + ".pdf"
       }
@@ -87,13 +87,13 @@ object Resolver extends Logging {
       // There is also an older syntax which requires resolving the DOI:
       // 10.4007/annals.2009.170.995 ---resolve to-> http://annals.math.princeton.edu/2009/170-2/p18
       // 							 ---links to---> http://annals.math.princeton.edu/wp-content/uploads/annals-v170-n2-p18-p.pdf
-      case doi if doi.startsWith("10.4007") && doi.count(_ == '.') == 5 => {
+      case doi if doi.startsWith("10.4007/") && doi.count(_ == '.') == 5 => {
         val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
         "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf"
       }
       // Homology, Homotopy and Applications
       // 10.4310/HHA.2012.v14.n1.a5 ---> http://www.intlpress.com/HHA/v14/n1/a5/pdf
-      case doi if doi.startsWith("10.4310") => {
+      case doi if doi.startsWith("10.4310/") => {
         val List(journal, year, volume, number, a) = doi.stripPrefix("10.4310/").split('.').toList
         "http://www.intlpress.com/" + List(journal, volume, number, a, "pdf").mkString("/")
       }
@@ -106,14 +106,12 @@ object Resolver extends Logging {
 
       // 10.4064/fm209-1-5 --resolves to---> http://journals.impan.pl/cgi-bin/doi?fm209-1-5
       //					--links to---> http://journals.impan.pl/cgi-bin/fm/pdf?fm209-1-05
-      case doi if doi.startsWith("10.4064") => {
+      case doi if doi.startsWith("10.4064/") => {
         val journalAbbreviation = doi.stripPrefix("10.4064/").take(2)
         val List(volume, number, id) = doi.stripPrefix("10.4064/").stripPrefix(journalAbbreviation).split('-').toList
         "http://journals.impan.pl/cgi-bin/" + journalAbbreviation + "/pdf?" + journalAbbreviation + volume + "-" + number + "-" + padLeft(id, '0', 2)
       }
 
-      // 10.1307/mmj/1220879410
-      
     }
     rules.lift(doi)
   }
@@ -130,7 +128,7 @@ object Resolver extends Logging {
     // PNAS can sometimes be resolves locally, but otherwise:
     // 10.1073/pnas.1001947107         ---resolves to---> http://www.pnas.org/content/107/32/14030
     //								 ---follow "Full Text (PDF)"---> http://www.pnas.org/content/107/32/14030.full.pdf
-    case doi if doi.startsWith("10.1073") => {
+    case doi if doi.startsWith("10.1073/") => {
       Article.fromDOI(doi) flatMap { article =>
         article.pageStart map { start =>
           "http://www.pnas.org/content/" + article.volume + "/" + article.number + "/" + start + ".full.pdf"
@@ -141,7 +139,7 @@ object Resolver extends Logging {
     // 10.1090, the AMS
     // 10.1090/S0002-9904-1897-00411-6 --> http://www.ams.org/journals/bull/1897-03-07/S0002-9904-1897-00411-6/S0002-9904-1897-00411-6.pdf
     // 10.1090/S0002-9947-2010-05210-9 --> http://www.ams.org/journals/tran/2011-363-05/S0002-9947-2010-05210-9/S0002-9947-2010-05210-9.pdf
-    case doi if doi.startsWith("10.1090") => {
+    case doi if doi.startsWith("10.1090/") => {
       Article.fromDOI(doi) match {
         case Some(article) => {
           val identifier = doi.stripPrefix("10.1090/")
@@ -198,7 +196,7 @@ object Resolver extends Logging {
     // 10.1112/blms/14.5.385 ---resolves to---> http://blms.oxfordjournals.org/content/14/5/385
     // 10.1112/plms/s3-65.2.423 ---resolves to---> http://plms.oxfordjournals.org/content/s3-65/2/423
     //							---links to--->    http://plms.oxfordjournals.org/content/s3-65/2/423.full.pdf
-    case doi if doi.startsWith("10.1112") && !doi.contains("-") => {
+    case doi if doi.startsWith("10.1112/") && !doi.contains("-") => {
       val journal = doi.split('/').toList match {
         case List("10.1112", journal, _) => journal
         case List("10.1112", fragment) if fragment.startsWith("S00246107") => "jlms"
@@ -217,7 +215,7 @@ object Resolver extends Logging {
     // 								  ---links to---> http://prl.aps.org/pdf/PRL/v101/i1/e010501
     // 10.1103/PhysRevA.75.032322 --> resolves to --> http://pra.aps.org/abstract/PRA/v75/i3/e032322
     // 							  ---links to --->    http://pra.aps.org/pdf/PRA/v75/i3/e032322
-    case doi if doi.startsWith("10.1103") => {
+    case doi if doi.startsWith("10.1103/") => {
       val List(journal, volume, page) = doi.stripPrefix("10.1103/").split('.').toList
       val shortJournal = journal match {
         case "RevModPhys" => "rmp"
@@ -257,7 +255,7 @@ object Resolver extends Logging {
     // 10.1070/IM2010v074n04ABEH002503 ---resolves to---> http://mr.crossref.org/iPage/?doi=10.1070%2FIM2010v074n04ABEH002503
     //								 ---follow "IOP Publishing"---> http://iopscience.iop.org/1064-5632/74/4/A03/
     // 								 ---follow "Full text PDF"--> http://iopscience.iop.org/1064-5632/74/4/A03/pdf/1064-5632_74_4_A03.pdf
-    case doi if doi.startsWith("10.1070") => {
+    case doi if doi.startsWith("10.1070/") => {
       val publisherPage = Html("http://mr.crossref.org/iPage/?doi=" + doi).getAnchorByText("IOP Publishing").click[HtmlPage]
       val links = Html.jQuery(publisherPage).get("a.pdf")
       selectLink(links).map(h => "http://iopscience.iop.org/" + h)
@@ -267,19 +265,19 @@ object Resolver extends Logging {
     // 10.2140/pjm.2010.247.323 ---resolves to---> http://msp.org/pjm/2010/247-2/p04.xhtml
     // 							---links to---> http://msp.org/pjm/2010/247-2/pjm-v247-n2-p04-s.pdf
     // unfortunately that "04" doesn't come from the metadata
-    case doi if doi.startsWith("10.2140") => {
+    case doi if doi.startsWith("10.2140/") => {
       selectLink(jQuery(doi).get("table.action a.download-caption").first).map(h => "http://msp.org" + h)
     }
 
     // Quantum Topology
     // 10.4171/QT/16 --> http://www.ems-ph.org/journals/show_pdf.php?issn=1663-487X&vol=2&iss=2&rank=1
-    case doi if doi.startsWith("10.4171") => {
+    case doi if doi.startsWith("10.4171/") => {
       selectLink(jQuery(doi).get("#content a").first).map(h => "http://www.ems-ph.org" + h)
     }
 
     // Annals, fallback if we couldn't do it locally or via dx.doi.org
     // 10.4007/annals.2004.160.493 ---> http://annals.math.princeton.edu/wp-content/uploads/annals-v160-n2-p04.pdf
-    case doi if doi.startsWith("10.4007") && doi.count(_ == '.') == 4 => {
+    case doi if doi.startsWith("10.4007/") && doi.count(_ == '.') == 4 => {
       selectLink(jQuery(doi).get("div#pdf-link a"))
     }
 
@@ -325,7 +323,7 @@ object Resolver extends Logging {
     // 10.1215/S0012-7094-92-06702-0 ---resolves to---> http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.dmj/1077294270
     //								 ---links to--->    http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.dmj/1077294270
     // 10.1215/00127094-1593344 ---resolves to---> http://projecteuclid.org/euclid.dmj/1338987165
-    case doi if doi.startsWith("10.1215") || doi.startsWith("10.1307/mmj") => {
+    case doi if doi.startsWith("10.1215/") || doi.startsWith("10.1307/mmj") => {
       resolveViaDX(doi).flatMap({ uriString =>
         val uri: Uri = uriString
         val JournalTag = """euclid\.([a-z]*)""".r
@@ -346,7 +344,7 @@ object Resolver extends Logging {
     //						 ---links to---> http://www.degruyter.com/dg/viewarticle.fullcontentlink:pdfeventlink/$002fj$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml?t:ac=j$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml
     // N.B degruyter send a header: "Content-Disposition: attachment; filename=crll.2000.019.pdf" which means browsers won't show the PDF inline.
     // Using XHR to obtain a blob works nicely.
-    case doi if doi.startsWith("10.1515") => {
+    case doi if doi.startsWith("10.1515/") => {
       resolveViaDX(doi).map({ url =>
         require(url.startsWith("http://www.degruyter.com/view/"))
         val identifier = url.stripPrefix("http://www.degruyter.com/view/").replaceAllLiterally("/", "$002f")
@@ -357,7 +355,7 @@ object Resolver extends Logging {
     // American Institute of Physics
     // http://dx.doi.org/10.1063/1.864184 ---resolves to---> http://link.aip.org/link/PFLDAS/v26/i3/p684/s1&Agg=doi
     // 									  ---links to---> http://scitation.aip.org/getpdf/servlet/GetPDFServlet?filetype=pdf&id=PFLDAS000026000003000684000001&idtype=cvips&doi=10.1063/1.864184&prog=normal
-    case doi if doi.startsWith("10.1063") => {
+    case doi if doi.startsWith("10.1063/") => {
       // This only works while logged in:
       //      selectLink(jQuery(doi).get("li.fulltextdesc a").first)
       resolveViaDX(doi).map({ url =>
@@ -376,7 +374,7 @@ object Resolver extends Logging {
 
     // 10.4007/annals.2009.170.995 ---resolve to-> http://annals.math.princeton.edu/2009/170-2/p18
     // 							 ---links to---> http://annals.math.princeton.edu/wp-content/uploads/annals-v170-n2-p18-p.pdf
-    case doi if doi.startsWith("10.4007") && doi.count(_ == '.') == 4 => {
+    case doi if doi.startsWith("10.4007/") && doi.count(_ == '.') == 4 => {
       resolveViaDX(doi).map({ url =>
         val List(year, volume, number, id) = url.stripPrefix("http://annals.math.princeton.edu/").split("[/-]").toList
         "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-" + id + "-p.pdf"
@@ -390,7 +388,7 @@ object Resolver extends Logging {
     // 								  ---links to---> http://prl.aps.org/pdf/PRL/v101/i1/e010501
     // 10.1103/PhysRevA.75.032322 --> resolves to --> http://pra.aps.org/abstract/PRA/v75/i3/e032322
     // 							  ---links to --->    http://pra.aps.org/pdf/PRA/v75/i3/e032322
-    case doi if doi.startsWith("10.1103") => {
+    case doi if doi.startsWith("10.1103/") => {
       resolveViaDX(doi).flatMap({
         case url if url.contains("abstract") => Some(url.replace("abstract", "pdf"))
         case url if url.startsWith("http://link.aps.org/doi/") => None // not enough information available
