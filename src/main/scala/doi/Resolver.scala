@@ -26,6 +26,11 @@ object Resolver extends Logging {
       // 10.1023/A:1015622607840 ---resolves to---> http://link.springer.com/article/10.1023%2FA%3A1015622607840
       // 						   ---links to---> http://link.springer.com/content/pdf/10.1023%2FA%3A1015622607840
       case doi if doi.startsWith("10.1007/") || doi.startsWith("10.1023") => "http://link.springer.com/content/pdf/" + doi
+      // 10.1073/pnas.95.1.98 ---resolves to---> http://www.pnas.org/content/95/1/98
+      //	                    ---links to---> http://www.pnas.org/content/95/1/98.full.pdf
+      case doi if doi.startsWith("10.1073/pnas") && doi.count(_ == '.') == 4 => {
+        "http://www.pnas.org/content/" + doi.stripPrefix("10.1073/pnas.").replaceAllLiterally(".", "/") + ".full.pdf"
+      }
       case doi if doi.startsWith("10.1080/") => "http://www.tandfonline.com/doi/pdf/" + doi
       // 10.1088/0951-7715/23/12/012 --> http://iopscience.iop.org/0951-7715/23/12/012/pdf/0951-7715_23_12_012.pdf
       case doi if doi.startsWith("10.1088/") => "http://iopscience.iop.org/" + doi.stripPrefix("10.1088/") + "/pdf/" + doi.stripPrefix("10.1088/").replace('/', '_') + ".pdf"
@@ -99,6 +104,7 @@ object Resolver extends Logging {
   }
 
   def resolveUsingMetadataRule: String => Option[String] = {
+    // PNAS can sometimes be resolves locally, but otherwise:
     // 10.1073/pnas.1001947107         ---resolves to---> http://www.pnas.org/content/107/32/14030
     //								 ---follow "Full Text (PDF)"---> http://www.pnas.org/content/107/32/14030.full.pdf
     case doi if doi.startsWith("10.1073") => {
@@ -349,14 +355,18 @@ object Resolver extends Logging {
       })
     }
 
-    // 10.1103/RevModPhys.80.1083  --- resolves to --> http://rmp.aps.org/abstract/RMP/v80/i3/p1083_1
+    // 10.1103/RevModPhys.80.1083  --- resolves to (off campus) --> http://link.aps.org/doi/10.1103/RevModPhys.80.1083
+    // 10.1103/RevModPhys.80.1083  --- resolves to (on campus) --> http://rmp.aps.org/abstract/RMP/v80/i3/p1083_1
     //							   --- links to --> http://rmp.aps.org/pdf/RMP/v80/i3/p1083_1
     // 10.1103/PhysRevLett.101.010501 -- resolves to --> http://prl.aps.org/abstract/PRL/v101/i1/e010501
     // 								  ---links to---> http://prl.aps.org/pdf/PRL/v101/i1/e010501
     // 10.1103/PhysRevA.75.032322 --> resolves to --> http://pra.aps.org/abstract/PRA/v75/i3/e032322
     // 							  ---links to --->    http://pra.aps.org/pdf/PRA/v75/i3/e032322
     case doi if doi.startsWith("10.1103") => {
-      resolveViaDX(doi).map({ url => url.replace("abstract", "pdf") })
+      resolveViaDX(doi).flatMap({
+        case url if url.contains("abstract") => Some(url.replace("abstract", "pdf"))
+        case url if url.startsWith("http://link.aps.org/doi/") => None // not enough information available
+      })
     }
 
     case _ => None
