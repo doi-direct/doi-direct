@@ -67,7 +67,10 @@ object Resolver extends Logging {
         "http://www.emis.de/journals/SIGMA/" + year + "/" + paper + "/sigma" + year.takeRight(2) + "-" + paper + ".pdf"
       }
       // 10.4007/annals.2011.174.3.5 --> http://annals.math.princeton.edu/wp-content/uploads/annals-v174-n3-p05-s.pdf
-      case doi if doi.startsWith("10.4007") => {
+      // There is also an older syntax which requires resolving the DOI:
+      // 10.4007/annals.2009.170.995 ---resolve to-> http://annals.math.princeton.edu/2009/170-2/p18
+      // 							 ---links to---> http://annals.math.princeton.edu/wp-content/uploads/annals-v170-n2-p18-p.pdf
+      case doi if doi.startsWith("10.4007") && doi.count(_ == '.') == 5 => {
         val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
         "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf"
       }
@@ -300,6 +303,15 @@ object Resolver extends Logging {
           padLeft(fragments(3).stripPrefix("p"), '0', 6) +
           padLeft(fragments(4).stripPrefix("s"), '0', 6) +
           "&idtype=cvips&doi=" + doi + "&prog=normal"
+      })
+    }
+
+    // 10.4007/annals.2009.170.995 ---resolve to-> http://annals.math.princeton.edu/2009/170-2/p18
+    // 							 ---links to---> http://annals.math.princeton.edu/wp-content/uploads/annals-v170-n2-p18-p.pdf
+    case doi if doi.startsWith("10.4007") && doi.count(_ == '.') == 4 => {
+      resolveViaDX(doi).map({ url =>
+        val List(year, volume, number, id) = url.stripPrefix("http://annals.math.princeton.edu/").split("[/-]").toList
+        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-" + id + "-p.pdf"
       })
     }
 
