@@ -50,7 +50,9 @@ object Resolver extends Logging {
       // And these ones here
       // 10.1112/plms/s3-65.2.423 ---resolves to---> http://plms.oxfordjournals.org/content/s3-65/2/423
       //							---links to--->    http://plms.oxfordjournals.org/content/s3-65/2/423.full.pdf
-      case doi if doi.startsWith("10.1112") && doi.contains("-") => {
+      // 10.1112/blms/14.5.385 ---resolves to---> http://blms.oxfordjournals.org/content/14/5/385
+
+      case doi if doi.startsWith("10.1112") && doi.contains("-") || doi.count(_ == '.') == 3 => {
         val List("10.1112", journal, fragment) = doi.split('/').toList
         "http://" + journal + ".oxfordjournals.org/content/" + fragment.replaceAllLiterally(".", "/") + ".full.pdf"
       }
@@ -169,6 +171,7 @@ object Resolver extends Logging {
     // 10.1112/S0010437X07003260 looks like it is at OUP, but it's really at CUP
     // 10.1112/S0024610701002733 ---resolves to---> http://jlms.oxfordjournals.org/content/65/1/223
     // And these ones above, by rewriting the DOI
+    // 10.1112/blms/14.5.385 ---resolves to---> http://blms.oxfordjournals.org/content/14/5/385
     // 10.1112/plms/s3-65.2.423 ---resolves to---> http://plms.oxfordjournals.org/content/s3-65/2/423
     //							---links to--->    http://plms.oxfordjournals.org/content/s3-65/2/423.full.pdf
     case doi if doi.startsWith("10.1112") && !doi.contains("-") => {
@@ -190,7 +193,7 @@ object Resolver extends Logging {
     // 								  ---links to---> http://prl.aps.org/pdf/PRL/v101/i1/e010501
     // 10.1103/PhysRevA.75.032322 --> resolves to --> http://pra.aps.org/abstract/PRA/v75/i3/e032322
     // 							  ---links to --->    http://pra.aps.org/pdf/PRA/v75/i3/e032322
-    case doi if doi.startsWith("10.1103") && Article.fromDOI(doi).nonEmpty => {
+    case doi if doi.startsWith("10.1103") => {
       val List(journal, volume, page) = doi.stripPrefix("10.1103/").split('.').toList
       val shortJournal = journal match {
         case "RevModPhys" => "rmp"
@@ -208,8 +211,9 @@ object Resolver extends Logging {
           case sj if sj.startsWith("pr") => "e" + page
         }
       }
-      val number = Article.fromDOI(doi).get.number
-      Some("http://" + shortJournal + ".aps.org/pdf/" + shortJournal.toUpperCase + "/v" + volume + "/i" + number + "/" + pageFragment(page))
+      Article.fromDOI(doi).map({ article =>
+        "http://" + shortJournal + ".aps.org/pdf/" + shortJournal.toUpperCase + "/v" + volume + "/i" + article.number + "/" + pageFragment(page)
+      })
     }
 
     case _ => None
@@ -300,9 +304,9 @@ object Resolver extends Logging {
     case doi if doi.startsWith("10.1215") => {
       resolveViaDX(doi).flatMap({ uriString =>
         val uri: Uri = uriString
-        println(uriString)
+        val JournalTag = """euclid\.([a-z]*)""".r
         val handle = uri.path.stripPrefix("/").split('/').toList match {
-          case "euclid.dmj" :: number :: _ => Some("euclid.dmj/" + number)
+          case JournalTag(tag) :: number :: _ => Some("euclid." + tag + "/" + number)
           case "Dienst" :: _ => Some(uri.query.params("id").head.stripSuffix("/"))
           case "DPubS" :: _ => Some(uri.query.params("handle").head)
           case _ => {
