@@ -243,6 +243,12 @@ object Resolver extends Logging {
       selectLink(jQuery(doi).get("#content a").first).map(h => "http://www.ems-ph.org" + h)
     }
 
+    // Annals, fallback if we couldn't do it locally or via dx.doi.org
+    // 10.4007/annals.2004.160.493 ---> http://annals.math.princeton.edu/wp-content/uploads/annals-v160-n2-p04.pdf
+    case doi if doi.startsWith("10.4007") && doi.count(_ == '.') == 4 => {
+      selectLink(jQuery(doi).get("div#pdf-link a"))
+    }
+
     case _ => None
   }
 
@@ -304,7 +310,8 @@ object Resolver extends Logging {
 
     // 10.1515/crll.2000.019 ---resolves to---> http://www.degruyter.com/view/j/crll.2000.2000.issue-519/crll.2000.019/crll.2000.019.xml
     //						 ---links to---> http://www.degruyter.com/dg/viewarticle.fullcontentlink:pdfeventlink/$002fj$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml?t:ac=j$002fcrll.2000.2000.issue-519$002fcrll.2000.019$002fcrll.2000.019.xml
-    // N.B degruyter send a header: "Content-Disposition: attachment; filename=crll.2000.019.pdf" which means Chrome won't show the PDF inline.
+    // N.B degruyter send a header: "Content-Disposition: attachment; filename=crll.2000.019.pdf" which means browsers won't show the PDF inline.
+    // Using XHR to obtain a blob works nicely.
     case doi if doi.startsWith("10.1515") => {
       resolveViaDX(doi).map({ url =>
         require(url.startsWith("http://www.degruyter.com/view/"))
