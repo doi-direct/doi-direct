@@ -99,7 +99,7 @@ object Resolver extends Logging {
       case doi if doi.startsWith("10.4064") => {
         val journalAbbreviation =  doi.stripPrefix("10.4064/").take(2)
         val List(volume, number, id) = doi.stripPrefix("10.4064/").stripPrefix(journalAbbreviation).split('-').toList
-        "http://journals.impan.pl/cgi-bin/" + journalAbbreviation + "/pdf?" + journalAbbreviation + volume + "-" + number + padLeft(id, '0', 2)
+        "http://journals.impan.pl/cgi-bin/" + journalAbbreviation + "/pdf?" + journalAbbreviation + volume + "-" + number + "-" + padLeft(id, '0', 2)
       }
     }
     rules.lift(doi)
