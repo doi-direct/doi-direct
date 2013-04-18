@@ -89,7 +89,8 @@ object Resolver extends Logging {
       // 							 ---links to---> http://annals.math.princeton.edu/wp-content/uploads/annals-v170-n2-p18-p.pdf
       case doi if doi.startsWith("10.4007/") && doi.count(_ == '.') == 5 => {
         val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
-        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + "-s.pdf"
+        val suffix = if(volume.toInt >= 170) "-s" else ""
+        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + suffix + ".pdf"
       }
       // Homology, Homotopy and Applications
       // 10.4310/HHA.2012.v14.n1.a5 ---> http://www.intlpress.com/HHA/v14/n1/a5/pdf
@@ -112,6 +113,8 @@ object Resolver extends Logging {
         "http://journals.impan.pl/cgi-bin/" + journalAbbreviation + "/pdf?" + journalAbbreviation + volume + "-" + number + "-" + padLeft(id, '0', 2)
       }
       
+      
+      // https://dl.acm.org/purchase.cfm?id=1255446&CFID=315412686&CFTOKEN=28137627
     }
     rules.lift(doi)
   }
@@ -388,7 +391,8 @@ object Resolver extends Logging {
     case doi if doi.startsWith("10.4007/") && doi.count(_ == '.') == 4 => {
       resolveViaDX(doi).map({ url =>
         val List(year, volume, number, id) = url.stripPrefix("http://annals.math.princeton.edu/").split("[/-]").toList
-        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-" + id + "-p.pdf" // FIXME, sometimes that -p is incorrect, sadly, e.g. 10.4007/annals.2005.162.581
+        val suffix = if(volume.toInt >= 170) "-s" else ""
+        "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-" + id + suffix + ".pdf"
       })
     }
 
