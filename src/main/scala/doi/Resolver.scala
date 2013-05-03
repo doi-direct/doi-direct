@@ -302,6 +302,7 @@ object Resolver extends Logging {
 
     // AAAS
     // 10.1126/
+    // FIXME not working
     case doi if doi.startsWith("10.1126/") => {
       selectLink(jQuery(doi).get("meta[name=citation_pdf_url]"), "content")
     }
