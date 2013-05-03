@@ -89,7 +89,7 @@ object Resolver extends Logging {
       // 							 ---links to---> http://annals.math.princeton.edu/wp-content/uploads/annals-v170-n2-p18-p.pdf
       case doi if doi.startsWith("10.4007/") && doi.count(_ == '.') == 5 => {
         val List("annals", year, volume, number, page) = doi.stripPrefix("10.4007/").split('.').toList
-        val suffix = if(volume.toInt >= 170) "-s" else ""
+        val suffix = if (volume.toInt >= 170) "-s" else ""
         "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-p" + padLeft(page.toString, '0', 2) + suffix + ".pdf"
       }
       // Homology, Homotopy and Applications
@@ -112,8 +112,7 @@ object Resolver extends Logging {
         val List(volume, number, id) = doi.stripPrefix("10.4064/").stripPrefix(journalAbbreviation).split('-').toList
         "http://journals.impan.pl/cgi-bin/" + journalAbbreviation + "/pdf?" + journalAbbreviation + volume + "-" + number + "-" + padLeft(id, '0', 2)
       }
-      
-      
+
       // https://dl.acm.org/purchase.cfm?id=1255446&CFID=315412686&CFTOKEN=28137627
     }
     rules.lift(doi)
@@ -162,7 +161,6 @@ object Resolver extends Logging {
             case "Int. Math. Res. Not. IMRN" => ??? // Shouldn't actually appear? Mistakes in the BIBTEX?
             case "J. London Math. Soc. (2)" => ??? // Also a mistake?
             case "J. Reine Angew. Math." => ??? // also mistakes...
-
           }
           Some("http://www.ams.org/journals/" + journalCode + "/" + article.year + "-" + padLeft(article.volume.toString, '0', 2) + "-" + padLeft(article.number.toString, '0', 2) + "/" + identifier + "/" + identifier + ".pdf")
         }
@@ -241,6 +239,16 @@ object Resolver extends Logging {
       })
     }
 
+    // http://dx.doi.org/10.1353/ajm.2012.0046
+    // Amer. J. Math. 134 (2012), no. 6, 1679–1704
+    // http://muse.jhu.edu/journals/american_journal_of_mathematics/v134/134.6.moravec.pdf
+    case doi if doi.startsWith("10.1353/ajm") => {
+      Article.fromDOI(doi).map({ article =>
+        val name = java.text.Normalizer.normalize(article.authors.head.lastName, java.text.Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "").toLowerCase
+      	"http://muse.jhu.edu/journals/american_journal_of_mathematics/v" + article.volume + "/" + article.volume + "." + article.number + "." + name + ".pdf"
+      })
+    }
+    
     case _ => None
   }
 
@@ -286,15 +294,12 @@ object Resolver extends Logging {
     }
 
     // Canad. Math. Bull.
-          // 10.4153/CMB-2010-014-8 --resolves to--> http://cms.math.ca/10.4153/CMB-2010-014-8
-      //                        ---links to---> http://cms.math.ca/cmb/v53/etingofB9125.pdf
-        case doi if doi.startsWith("10.4153/") => {
+    // 10.4153/CMB-2010-014-8 --resolves to--> http://cms.math.ca/10.4153/CMB-2010-014-8
+    //                        ---links to---> http://cms.math.ca/cmb/v53/etingofB9125.pdf
+    case doi if doi.startsWith("10.4153/") => {
       selectLink(jQuery(doi).get("div#readlink a")).map(h => "http://cms.math.ca" + h)
     }
 
-
-
-    
     case _ => None
   }
 
@@ -391,7 +396,7 @@ object Resolver extends Logging {
     case doi if doi.startsWith("10.4007/") && doi.count(_ == '.') == 4 => {
       resolveViaDX(doi).map({ url =>
         val List(year, volume, number, id) = url.stripPrefix("http://annals.math.princeton.edu/").split("[/-]").toList
-        val suffix = if(volume.toInt >= 170) "-s" else ""
+        val suffix = if (volume.toInt >= 170) "-s" else ""
         "http://annals.math.princeton.edu/wp-content/uploads/annals-v" + volume + "-n" + number + "-" + id + suffix + ".pdf"
       })
     }
