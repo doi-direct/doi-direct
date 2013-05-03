@@ -252,9 +252,9 @@ object Resolver extends Logging {
     case _ => None
   }
 
-  def selectLink(doj: Doj) = {
+  def selectLink(doj: Doj, attr: String = "href") = {
     if (doj.size == 1) {
-      Some(doj.first.attribute("href"))
+      Some(doj.first.attribute(attr))
     } else {
       None
     }
@@ -298,6 +298,12 @@ object Resolver extends Logging {
     //                        ---links to---> http://cms.math.ca/cmb/v53/etingofB9125.pdf
     case doi if doi.startsWith("10.4153/") => {
       selectLink(jQuery(doi).get("div#readlink a")).map(h => "http://cms.math.ca" + h)
+    }
+
+    // AAAS
+    // 10.1126/
+    case doi if doi.startsWith("10.1126/") => {
+      selectLink(jQuery(doi).get("meta[name=citation_pdf_url]"), "content")
     }
 
     case _ => None
@@ -413,13 +419,6 @@ object Resolver extends Logging {
         case url if url.contains("abstract") => Some(url.replace("abstract", "pdf"))
         case url if url.startsWith("http://link.aps.org/doi/") => None // not enough information available
       })
-    }
-
-    // AAAS (e.g. Science magazine)
-    case doi if doi.startsWith("10.1126") => {
-      resolveViaDX(doi).map({ url =>
-        url + ".full.pdf"
-      });
     }
 
     case _ => None
