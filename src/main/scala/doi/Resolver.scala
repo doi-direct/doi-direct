@@ -342,7 +342,7 @@ object Resolver extends Logging {
     // 10.1215/S0012-7094-92-06702-0 ---resolves to---> http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid.dmj/1077294270
     //								 ---links to--->    http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.dmj/1077294270
     // 10.1215/00127094-1593344 ---resolves to---> http://projecteuclid.org/euclid.dmj/1338987165
-    case doi if doi.startsWith("10.1215/") || doi.startsWith("10.1307/mmj") => {
+    case doi if doi.startsWith("10.1215/") || doi.startsWith("10.1307/mmj") || doi.startsWith("10.2969") => {
       resolveViaDX(doi).flatMap({ uriString =>
         val uri: Uri = uriString
         val JournalTag = """euclid\.([a-z]*)""".r
