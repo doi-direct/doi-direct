@@ -421,6 +421,13 @@ object Resolver extends Logging {
       })
     }
 
+    // Hindawi
+    case doi if doi.startsWith("10.1155/") => {
+      resolveViaDX(doi).map({ url =>
+        "http://downloads." + url.stripPrefix("http://www.").stripSuffix("/") + ".pdf"
+      })
+    }
+
     case _ => None
   }
 
