@@ -415,6 +415,13 @@ object Resolver extends Logging {
       })
     }
 
+    // AAAS (e.g. Science magazine)
+    case doi if doi.startsWith("10.1126") => {
+      resolveViaDX(doi).map({ url =>
+        url + ".full.pdf"
+      });
+    }
+
     case _ => None
   }
 
